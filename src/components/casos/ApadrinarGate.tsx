@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { logout } from "@/app/ingresar/actions";
 import { IconoHuella, IconoMenu } from "@/components/iconos";
 import { ContourField } from "@/components/mapa/ContourField";
 import { RouteMap } from "@/components/mapa/RouteMap";
 import { buttonClass, Spinner } from "@/components/ui";
+import { Ventana } from "@/components/ventana";
 import { useT } from "@/i18n/cliente";
 import type { Clave } from "@/i18n/traductor";
 import type { RouteStage } from "@/modules/catalog";
@@ -44,12 +45,6 @@ export function ApadrinarGate({
   const volver = encodeURIComponent(returnTo);
   const close = () => router.push(ruta(closeHref), { scroll: false });
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-
   const switchAccount = async () => {
     setLeaving(true);
     await logout().catch(() => {});
@@ -58,119 +53,115 @@ export function ApadrinarGate({
   };
 
   return (
-    <div className="anim-fondo fixed inset-0 z-50 flex items-center justify-center bg-texto/60 p-4" onClick={close}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="titulo-cuenta-apadrinar"
-        onClick={(e) => e.stopPropagation()}
-        className="anim-ventana grid max-h-[94vh] w-full max-w-5xl overflow-auto rounded-[28px] bg-white shadow-2xl md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]"
-      >
-        {/* Lo que va a apadrinar: el animal y su ruta, sobre curvas de nivel. */}
-        <aside className="relative isolate flex flex-col gap-5 overflow-hidden bg-profundo p-7 text-white">
-          <ContourField variant="noche" seed={31} className="absolute inset-0 -z-10 h-full w-full" />
-          <div className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-salvia ring-4 ring-crema/90">
-            {item.photoUrl ? <Image src={item.photoUrl} alt={item.name} fill sizes="420px" className="object-cover" /> : null}
-          </div>
-          <div>
-            <p className="font-display text-3xl font-bold">{item.name}</p>
-            <p className="cifras text-sm text-white/80">{item.code}</p>
-          </div>
-          <RouteMap
-            stages={item.route}
-            tone="oscuro"
-            size="compacto"
-            showAmounts={false}
-            label={t("casos.rutaDe", { nombre: item.name })}
-          />
-        </aside>
+    <Ventana
+      onClose={close}
+      labelledBy="titulo-cuenta-apadrinar"
+      className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]"
+    >
+      {/* Lo que va a apadrinar: el animal y su ruta, sobre curvas de nivel. */}
+      <aside className="relative isolate flex flex-col gap-5 overflow-hidden bg-profundo p-7 text-white">
+        <ContourField variant="noche" seed={31} className="absolute inset-0 -z-10 h-full w-full" />
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[22px] bg-salvia ring-4 ring-crema/90">
+          {item.photoUrl ? <Image src={item.photoUrl} alt={item.name} fill sizes="420px" className="object-cover" /> : null}
+        </div>
+        <div>
+          <p className="font-display text-3xl font-bold">{item.name}</p>
+          <p className="cifras text-sm text-white/80">{item.code}</p>
+        </div>
+        <RouteMap
+          stages={item.route}
+          tone="oscuro"
+          size="compacto"
+          showAmounts={false}
+          label={t("casos.rutaDe", { nombre: item.name })}
+        />
+      </aside>
 
-        <section className="relative space-y-6 p-7 sm:p-9">
-          <button
-            type="button"
-            onClick={close}
-            aria-label={t("casos.cerrar")}
-            className="mov-hover absolute top-5 right-5 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-arena text-texto transition-[transform,border-color,color] duration-200 ease-(--ease-spring) hover:rotate-90 hover:border-bosque hover:text-bosque"
-          >
-            <IconoMenu abierto className="h-5 w-5" />
-          </button>
+      <section className="relative space-y-6 p-7 sm:p-9">
+        <button
+          type="button"
+          onClick={close}
+          aria-label={t("casos.cerrar")}
+          className="mov-hover absolute top-5 right-5 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-arena text-texto transition-[transform,border-color,color] duration-200 ease-(--ease-spring) hover:rotate-90 hover:border-bosque hover:text-bosque"
+        >
+          <IconoMenu abierto className="h-5 w-5" />
+        </button>
 
-          {otherAccount ? (
-            <>
-              <h2 id="titulo-cuenta-apadrinar" className="pr-12 text-4xl">
-                {t("casos.invitacion.otraCuenta.titulo")}
+        {otherAccount ? (
+          <>
+            <h2 id="titulo-cuenta-apadrinar" className="pr-12 text-4xl">
+              {t("casos.invitacion.otraCuenta.titulo")}
+            </h2>
+            <p className="text-lg text-secundario">
+              {rich(
+                "casos.invitacion.otraCuenta.texto",
+                { b: (s) => <strong className="text-texto">{s}</strong> },
+                { cuenta: otherAccount, nombre: item.name },
+              )}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" onClick={switchAccount} disabled={leaving} className={buttonClass("primario", "py-3.5")}>
+                {leaving ? <Spinner /> : null}
+                {t("casos.invitacion.otraCuenta.salir")}
+              </button>
+              <button type="button" onClick={close} className={buttonClass("secundario", "py-3.5")}>
+                {t("casos.invitacion.otraCuenta.volver")}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-2 pr-12">
+              <h2 id="titulo-cuenta-apadrinar" className="text-4xl">
+                {t("casos.invitacion.titulo")}
               </h2>
-              <p className="text-lg text-secundario">
-                {rich(
-                  "casos.invitacion.otraCuenta.texto",
-                  { b: (s) => <strong className="text-texto">{s}</strong> },
-                  { cuenta: otherAccount, nombre: item.name },
-                )}
+              <p className="text-lg text-secundario">{t("casos.invitacion.texto", { nombre: item.name })}</p>
+            </div>
+
+            {/* Los tres pasos como un sendero: el primero late, es donde va la persona. */}
+            <ol className="relative space-y-4">
+              <span aria-hidden className="absolute top-5 bottom-5 left-[1.2rem] border-l-2 border-dashed border-bosque/35" />
+              {PASOS.map((paso, i) => (
+                <li key={paso.titulo} className="relative flex gap-4">
+                  <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
+                    {i === 0 ? <span aria-hidden className="absolute inset-0 animate-latido rounded-full bg-bosque" /> : null}
+                    <span
+                      className={`cifras relative flex h-10 w-10 items-center justify-center rounded-full font-bold ${i === 0 ? "bg-bosque text-white" : "border-2 border-dashed border-arena bg-crema text-secundario"}`}
+                    >
+                      {i + 1}
+                    </span>
+                  </span>
+                  <span className="pt-1.5">
+                    <strong className="block leading-snug">{t(paso.titulo)}</strong>
+                    <span className="text-secundario">{t(paso.texto)}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            {/* La insignia que gana con su primer aporte. */}
+            <div className="flex items-center gap-4 rounded-[20px] bg-crema p-4">
+              <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-[3px] border-dashed border-arena bg-white text-profundo">
+                <IconoHuella className="h-7 w-7" />
+              </span>
+              <p>
+                <strong className="block">{t("casos.invitacion.insignia")}</strong>
+                <span className="text-sm text-secundario">{t("casos.invitacion.insigniaTexto")}</span>
               </p>
-              <div className="flex flex-wrap gap-3">
-                <button type="button" onClick={switchAccount} disabled={leaving} className={buttonClass("primario", "py-3.5")}>
-                  {leaving ? <Spinner /> : null}
-                  {t("casos.invitacion.otraCuenta.salir")}
-                </button>
-                <button type="button" onClick={close} className={buttonClass("secundario", "py-3.5")}>
-                  {t("casos.invitacion.otraCuenta.volver")}
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-2 pr-12">
-                <h2 id="titulo-cuenta-apadrinar" className="text-4xl">
-                  {t("casos.invitacion.titulo")}
-                </h2>
-                <p className="text-lg text-secundario">{t("casos.invitacion.texto", { nombre: item.name })}</p>
-              </div>
+            </div>
 
-              {/* Los tres pasos como un sendero: el primero late, es donde va la persona. */}
-              <ol className="relative space-y-4">
-                <span aria-hidden className="absolute top-5 bottom-5 left-[1.2rem] border-l-2 border-dashed border-bosque/35" />
-                {PASOS.map((paso, i) => (
-                  <li key={paso.titulo} className="relative flex gap-4">
-                    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center">
-                      {i === 0 ? <span aria-hidden className="absolute inset-0 animate-latido rounded-full bg-bosque" /> : null}
-                      <span
-                        className={`cifras relative flex h-10 w-10 items-center justify-center rounded-full font-bold ${i === 0 ? "bg-bosque text-white" : "border-2 border-dashed border-arena bg-crema text-secundario"}`}
-                      >
-                        {i + 1}
-                      </span>
-                    </span>
-                    <span className="pt-1.5">
-                      <strong className="block leading-snug">{t(paso.titulo)}</strong>
-                      <span className="text-secundario">{t(paso.texto)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-
-              {/* La insignia que gana con su primer aporte. */}
-              <div className="flex items-center gap-4 rounded-[20px] bg-crema p-4">
-                <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-[3px] border-dashed border-arena bg-white text-profundo">
-                  <IconoHuella className="h-7 w-7" />
-                </span>
-                <p>
-                  <strong className="block">{t("casos.invitacion.insignia")}</strong>
-                  <span className="text-sm text-secundario">{t("casos.invitacion.insigniaTexto")}</span>
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <Link href={ruta(`/ingresar?volver=${volver}`)} className={buttonClass("primario", "px-7 py-3.5 text-lg")}>
-                  {t("casos.invitacion.crear")}
-                </Link>
-                <Link href={ruta(`/ingresar?modo=ingresar&volver=${volver}`)} className={buttonClass("secundario", "py-3.5")}>
-                  {t("casos.invitacion.yaTengo")}
-                </Link>
-              </div>
-              <p className="text-sm text-secundario">{t("casos.invitacion.pie")}</p>
-            </>
-          )}
-        </section>
-      </div>
-    </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href={ruta(`/ingresar?volver=${volver}`)} className={buttonClass("primario", "px-7 py-3.5 text-lg")}>
+                {t("casos.invitacion.crear")}
+              </Link>
+              <Link href={ruta(`/ingresar?modo=ingresar&volver=${volver}`)} className={buttonClass("secundario", "py-3.5")}>
+                {t("casos.invitacion.yaTengo")}
+              </Link>
+            </div>
+            <p className="text-sm text-secundario">{t("casos.invitacion.pie")}</p>
+          </>
+        )}
+      </section>
+    </Ventana>
   );
 }
