@@ -195,7 +195,7 @@ Amplía el contrato `RaizSilvestre` de la semana 3 (que sigue en el historial) c
 
 ## Declaración de uso de IA (proyecto completo)
 
-64 de los 78 commits del repositorio (hasta el 12 de noviembre de 2026) llevan la línea `Co-Authored-By: Claude …`. Se listan con `git log --grep="Co-Authored-By: Claude" --oneline`.
+85 de los 101 commits del repositorio (al 12 de noviembre de 2026) llevan la línea `Co-Authored-By: Claude …`. Se listan con `git log --grep="Co-Authored-By: Claude" --oneline`.
 
 | Qué parte | Herramienta | Para qué | Qué verificamos a mano |
 |---|---|---|---|
