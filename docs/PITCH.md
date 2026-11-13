@@ -18,7 +18,7 @@ Pitch de 3 minutos, 3 minutos de demo en vivo y 2 de preguntas. Ensayado con rel
 
 ### 0:30–1:15 · Qué hace la app hoy
 
-> Esto es lo que hace hoy, en testnet. Cada animal es un caso con etapas y el costo de cada una, y el administrador lo crea en el contrato con `crear_caso`. Un donante entra, apadrina la guacamaya con 50 dólares y firma con su billetera. La función `aportar` reparte el aporte en orden: 40 a la medicina y 10 a los cuidados, y rechaza lo que pase de la meta. Cuando la ONG compra la medicina, llama a `registrar_gasto`: el contrato le paga directo a la droguería y guarda el hash de la factura. Con `registrar_hito` deja la huella de la foto del avance. Y cualquiera, con `consultar_caso`, ve cuánto tiene cubierto y gastado cada etapa.
+> Esto es lo que hace hoy, en testnet. Cada animal es un caso con etapas y el costo de cada una, y el administrador lo crea en el contrato con `crear_caso`. Un donante entra, apadrina la guacamaya con 40 dólares y firma con su billetera. La función `aportar` reparte el aporte en orden: la medicina ya llevaba 10 de 40, así que 30 la completan y los otros 10 van a los cuidados; y rechaza lo que pase de la meta. Cuando la ONG compra la medicina, llama a `registrar_gasto`: el contrato le paga directo a la droguería y guarda el hash de la factura. Con `registrar_hito` deja la huella de la foto del avance. Y cualquiera, con `consultar_caso`, ve cuánto tiene cubierto y gastado cada etapa.
 
 ### 1:15–2:00 · Por qué Stellar
 
@@ -40,10 +40,12 @@ El error de desarrollo está en `DEBUG_LOG.md` y en el commit "fix(aportes): ree
 
 Un solo computador con dos perfiles de navegador: el del donante, sin sesión iniciada y con Freighter ya instalado y con USDC de prueba, y el de Refugio Alas Libres, con la sesión iniciada en el portal y su Freighter.
 
+La guacamaya arranca en 10 de 150 USDC: en el contrato de la demo quedaron 10 USDC de una prueba del equipo, todos en la etapa 1 (medicamento, 10 de 40), y el contrato no permite devolverlos. Por eso el aporte en vivo es de 40 USDC: completa justo el medicamento antes de registrar su gasto de 40.
+
 | Tiempo | Qué se hace | Qué se dice |
 |---|---|---|
-| 0:00–0:30 | Sin cuenta, se abre la guacamaya (POW_001, 0 de 150 USDC) y se pulsa "Apadrinar este caso": la página no deja aportar y pide crear una cuenta. Se crea con correo y contraseña, y la página vuelve al caso con la ventana de apadrinar abierta | "Nadie dona de forma anónima: primero se crea una cuenta. La contraseña nunca llega a nuestro servidor." |
-| 0:30–1:10 | Se conecta la billetera Freighter y se eligen 50 USDC. La ventana muestra el reparto (40 y 10) antes de firmar. Se firma y el comprobante se abre en Stellar Expert | "El donante conecta su billetera y, antes de firmar, ya sabe en qué se usará su aporte. Esta es la invocación de `aportar` en testnet, con el reparto en el evento." |
+| 0:00–0:30 | Sin cuenta, se abre la guacamaya (POW_001, que ya lleva 10 de 150 USDC) y se pulsa "Apadrinar este caso": la página no deja aportar y pide crear una cuenta. Se crea con correo y contraseña, y la página vuelve al caso con la ventana de apadrinar abierta | "Nadie dona de forma anónima: primero se crea una cuenta. La contraseña nunca llega a nuestro servidor." |
+| 0:30–1:10 | Se conecta la billetera Freighter y se escriben 40 USDC en «Otro valor». La ventana muestra el reparto antes de firmar: 30 completan el medicamento (que ya llevaba 10) y 10 van a los cuidados. Se firma y el comprobante se abre en Stellar Expert | "El donante conecta su billetera y, antes de firmar, ya sabe en qué se usará su aporte. Esta es la invocación de `aportar` en testnet, con el reparto en el evento." |
 | 1:10–1:50 | Portal de Refugio Alas Libres, "Registrar gasto": POW_001, etapa 1, 40 USDC, Droguería Veterinaria El Arrayán, factura FV-0412. Se firma y se abre en Stellar Expert | "La ONG compró la medicina. El contrato le paga directo a la droguería: acá se ve el pago y el hash de la factura." |
 | 1:50–2:20 | De vuelta como donante: el panel de transparencia muestra el gasto con su factura. Luego "Mi perfil": "Tu aporte se usó en" y la insignia Huella verificada | "Esta es la doble confirmación: la factura en la página y el pago en la red, con el mismo hash." |
 | 2:20–2:50 | Verificación de identidad (KYC): se intenta apadrinar con 60 USDC y la página lo frena y lleva a verificar la identidad. Se muestran los pasos (documento, prueba de vida y comparación del rostro) y se completa con "Simular la verificación (demo)" | "Con la cuenta se puede aportar hasta 50 dólares. Para más, pedimos verificar la identidad con documento y prueba de vida. En la demo la consulta al registro está simulada." |
