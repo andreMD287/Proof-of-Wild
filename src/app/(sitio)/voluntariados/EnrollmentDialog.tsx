@@ -45,18 +45,23 @@ export function EnrollmentDialog({
     const f = new FormData(event.currentTarget);
     setBusy(true);
     setError(null);
-    const result = await submitEnrollment({
-      volunteeringId: v.id,
-      fullName: String(f.get("fullName") ?? ""),
-      email: String(f.get("email") ?? ""),
-      phone: String(f.get("phone") ?? ""),
-      availability,
-      consent: f.get("consent") !== null,
-    });
-    setBusy(false);
-    if (!result.ok) return setError(result.message);
-    setDone(true);
-    router.refresh();
+    try {
+      const result = await submitEnrollment({
+        volunteeringId: v.id,
+        fullName: String(f.get("fullName") ?? ""),
+        email: String(f.get("email") ?? ""),
+        phone: String(f.get("phone") ?? ""),
+        availability,
+        consent: f.get("consent") !== null,
+      });
+      if (!result.ok) return setError(result.message);
+      setDone(true);
+      router.refresh();
+    } catch {
+      setError(t("comun.error.conexion"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   const free = v.capacity - v.occupied;

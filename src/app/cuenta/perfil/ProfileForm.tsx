@@ -45,11 +45,17 @@ export function ProfileForm({ email, initial }: { email: string; initial: Profil
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
-    const result = await saveProfile(data);
-    setBusy(false);
-    if (!result.ok) return setError(result.message);
-    router.push(ruta("/perfil"));
-    router.refresh();
+    setError(null);
+    try {
+      const result = await saveProfile(data);
+      if (!result.ok) return setError(result.message);
+      router.push(ruta("/perfil"));
+      router.refresh();
+    } catch {
+      setError(t("comun.error.conexion"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   // Sin suponer el género de la persona: «Voluntariado» en vez de «Voluntaria» o «Voluntario».

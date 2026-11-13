@@ -19,9 +19,15 @@ export function DisconnectButton() {
       disabled={busy}
       onClick={async () => {
         setBusy(true);
-        await Promise.all([unlinkWallet(), disconnect()]);
-        router.refresh();
-        setBusy(false);
+        try {
+          await Promise.all([unlinkWallet(), disconnect()]);
+        } catch (error) {
+          // El botón vuelve a quedar disponible; al refrescar, la página muestra si la billetera sigue ligada.
+          console.error(error);
+        } finally {
+          setBusy(false);
+          router.refresh();
+        }
       }}
       className={buttonClass("contorno", "disabled:border-white/30 disabled:bg-transparent disabled:text-white/60")}
     >

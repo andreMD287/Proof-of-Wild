@@ -36,13 +36,18 @@ export function AccountForms({ initialMode, initialRole, returnTo }: { initialMo
     }
 
     setBusy(true);
-    const result =
-      mode === "crear" ? await signUp(t, email, password, role, returnTo) : await signIn(t, email, password, returnTo);
-    setBusy(false);
-    if (!result.ok) return setError(result.message);
-    // El servidor devuelve la ruta sin prefijo de idioma.
-    router.push(ruta(result.data.redirectTo));
-    router.refresh();
+    try {
+      const result =
+        mode === "crear" ? await signUp(t, email, password, role, returnTo) : await signIn(t, email, password, returnTo);
+      if (!result.ok) return setError(result.message);
+      // El servidor devuelve la ruta sin prefijo de idioma.
+      router.push(ruta(result.data.redirectTo));
+      router.refresh();
+    } catch {
+      setError(t("comun.error.conexion"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   const tab = (value: Mode, label: string) => (

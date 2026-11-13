@@ -52,6 +52,7 @@ const es = {
   "comun.error.titulo": "No pudimos cargar esta página.",
   "comun.error.texto": "Puede ser la conexión o la red de pruebas. Vuelve a intentarlo en unos segundos.",
   "comun.error.reintentar": "Reintentar",
+  "comun.error.conexion": "No pudimos comunicarnos con el servidor. Revisa tu conexión e inténtalo de nuevo.",
   "comun.irAlInicio": "Ir al inicio",
   "comun.noEncontrado.titulo": "Esta ruta no está en el mapa",
   "comun.noEncontrado.texto":
@@ -120,6 +121,7 @@ export const comun = {
     "comun.error.titulo": "We couldn't load this page.",
     "comun.error.texto": "It may be the connection or the test network. Try again in a few seconds.",
     "comun.error.reintentar": "Try again",
+    "comun.error.conexion": "We couldn't reach the server. Check your connection and try again.",
     "comun.irAlInicio": "Go to home",
     "comun.noEncontrado.titulo": "This route isn't on the map",
     "comun.noEncontrado.texto":
@@ -184,6 +186,7 @@ export const comun = {
     "comun.error.titulo": "Não conseguimos carregar esta página.",
     "comun.error.texto": "Pode ser a conexão ou a rede de testes. Tente novamente em alguns segundos.",
     "comun.error.reintentar": "Tentar novamente",
+    "comun.error.conexion": "Não conseguimos falar com o servidor. Verifique sua conexão e tente novamente.",
     "comun.irAlInicio": "Ir para o início",
     "comun.noEncontrado.titulo": "Esta rota não está no mapa",
     "comun.noEncontrado.texto":

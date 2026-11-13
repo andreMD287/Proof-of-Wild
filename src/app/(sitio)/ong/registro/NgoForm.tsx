@@ -37,10 +37,15 @@ export function NgoForm({ contactEmail }: { contactEmail: string }) {
     };
     setBusy(true);
     setError(null);
-    const result = await submitNgoApplication(input);
-    setBusy(false);
-    if (!result.ok) return setError(result.message);
-    router.refresh();
+    try {
+      const result = await submitNgoApplication(input);
+      if (!result.ok) return setError(result.message);
+      router.refresh();
+    } catch {
+      setError(t("comun.error.conexion"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
