@@ -44,6 +44,22 @@ Qué NO hace todavía:
 - **Un hash no prueba que una factura sea auténtica**, solo que no cambió. Eso depende de la validación humana.
 - Otros pendientes técnicos están en la [bitácora de depuración](DEBUG_LOG.md#abiertos) y en la [deuda reconocida](docs/arquitectura/arquitectura.md#deuda-reconocida).
 
+## Límites conocidos y siguiente paso
+
+Revisamos el contrato y la página antes del Demo Day. Estos son los límites que conocemos, cómo están hoy y qué haríamos después. No volvimos a desplegar el contrato antes de la demo.
+
+| # | Límite | Estado hoy | Siguiente paso |
+|---|---|---|---|
+| L1 | `registrar_gasto` lo firma solo la ONG del caso | Declarado. Cada gasto queda público, con el pago al proveedor y el hash de la factura | Doble firma: la ONG y un validador (prevista como etapa 2 en el ADR-11) |
+| L2 | No hay cierre de caso ni devoluciones: si un caso no llega a la meta, el saldo se queda en el contrato | Declarado | Una función `cerrar_caso` con plazo y devolución proporcional a los donantes |
+| L3 | La primera cuenta que llame `inicializar` queda como administradora | El script de preparación lo llama justo después del despliegue, y `consultar_config` muestra la cuenta administradora | Inicializar con `__constructor`, en la misma transacción del despliegue |
+| L4 | El contrato no se puede actualizar, y no se puede cambiar la ONG de un caso | Decisión del MVP: nadie puede cambiar las reglas después de un aporte | Cambio de ONG con la firma del administrador y de un validador, y con evento público |
+| L5 | La cuenta y el límite de 50 USDC sin KYC los aplica la página, no el contrato: `aportar` acepta cualquier billetera con USDC | Declarado. Un aporte hecho por fuera de la página igual queda repartido y público | Que el contrato acepte solo cuentas verificadas por la plataforma |
+| L6 | La biometría corre en el navegador y se puede falsear; la consulta al registro y la verificación de las ONG son simuladas | Declarado y marcado como simulado en la página | Un proveedor de identidad (Truora, Didit o MetaMap) con el mismo puerto `IdentityProvider` |
+| L7 | El contrato no sabe si una factura es real: guarda su hash, no su contenido | La página publica la factura, con los datos de terceros tapados, para compararla con el hash | Que el validador de L1 revise la factura antes de firmar el gasto |
+| L8 | El USDC es de prueba y lo emitió el equipo, así que su emisora podría crear más | Solo en testnet, sin valor real | USDC de Circle en la red principal |
+| L9 | No hay forma de recuperar la contraseña | Fuera del MVP | Recuperación por correo |
+
 ## Cuentas y contratos en testnet
 
 | Rol | Identificador |
