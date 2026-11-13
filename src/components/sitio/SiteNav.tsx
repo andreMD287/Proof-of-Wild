@@ -15,6 +15,15 @@ import { SelectorIdioma } from "./SelectorIdioma";
 
 type Account = { label: string; href: string; profileHref: string | null } | null;
 
+/** `decodeURIComponent` lanza con un % suelto (un enlace a /#100%): en ese caso se usa el texto tal cual. */
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
 /**
  * Sección visible en la página principal: la que cruza una franja delgada a media pantalla. Usa un
  * IntersectionObserver, así se actualiza también cuando la página termina de acomodarse (fotos, fuentes) y no solo
@@ -83,7 +92,7 @@ export function SiteNav({ account }: { account: Account }) {
   // navegador ya no encuentra el ancla: se espera a que la sección exista y se baja hasta ella.
   useEffect(() => {
     if (pathname !== "/" || !window.location.hash) return;
-    const id = decodeURIComponent(window.location.hash.slice(1));
+    const id = safeDecode(window.location.hash.slice(1));
     let tries = 0;
     const timer = window.setInterval(() => {
       const el = document.getElementById(id);
