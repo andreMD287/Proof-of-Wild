@@ -135,6 +135,7 @@ npm run dev               # http://localhost:3000
 | `npm run db:seed` | Carga ONG, proveedores, casos con etapas, donantes y voluntariados (sin actividad en la red) |
 | `npm run db:seed:activity` | Igual, con aportes, gastos e hitos de ejemplo con **hashes inventados**: solo para trabajar la interfaz sin red |
 | `npm run db:fotos` | Pone las fotos de los casos y de cada etapa en una base ya sembrada, sin tocar cuentas ni aportes |
+| `npm run db:traducciones` | Pone las traducciones al inglés y al portugués de la demo en una base ya sembrada (necesita `db:migrate`), sin tocar lo registrado en vivo |
 | `node scripts/preparar-imagenes.mjs [--drive] "<carpeta>"` | Re-codifica en WebP sin EXIF las fotos que entrega el equipo |
 | `npx tsx --env-file=.env scripts/evidencias-a-bd.ts` | Pasa a la base las evidencias que estaban en disco, con la misma clave |
 
@@ -226,7 +227,7 @@ La plataforma está en **español, inglés y portugués de Brasil**, como kiba.t
 - Los textos están en `src/i18n/mensajes/<área>.ts` (`comun`, `inicio`, `casos`, `cuenta`, `ong`, `huella`, `errores`). El español es la fuente y el compilador avisa si a una clave le falta el inglés o el portugués.
 - En un componente de servidor: `const { t, ruta } = await getT();` (`@/i18n/servidor`); en uno de cliente: `const { t, ruta } = useT();` (`@/i18n/cliente`). Todo enlace interno pasa por `ruta()`.
 - Los errores del dominio se escriben en español y se traducen al responder (`traducirError`).
-- No se traduce lo que escriben las ONG: historias, etapas y voluntariados se ven como los escribieron.
+- Lo que escriben las ONG (historias, etapas, hitos, conceptos de gasto, descripción y voluntariados) guarda sus traducciones en la columna `translations` de cada fila (ADR-23). Cada página lo pide en su idioma y, si no hay traducción, lo muestra como lo escribió la ONG. La demo trae inglés y portugués de Brasil.
 
 ### Tecnologías
 
