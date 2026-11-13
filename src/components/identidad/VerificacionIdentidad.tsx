@@ -194,6 +194,8 @@ export function VerificacionIdentidad({ volver, volverLabel }: { volver: string 
       try {
         const human = await loadHuman();
         setModelState("ready");
+        // Si la persona salió de este paso mientras cargaba el modelo, no se enciende la cámara ni se pide permiso.
+        if (stopped) return;
         stream = await openCamera("user", t);
         if (stopped) return stopCamera(stream);
         const video = selfieVideo.current;
@@ -809,7 +811,15 @@ export function IdentitySummary({ identity }: { identity: VerifiedIdentity }) {
     [t("cuenta.identidad.resumen.referencia"), identity.providerReference],
     [
       t("cuenta.identidad.resumen.fecha"),
-      new Date(identity.verifiedAt).toLocaleString(locale, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }),
+      // Zona fija: el servidor (UTC) y el navegador darían horas distintas y React avisaría de un desajuste al hidratar.
+      new Date(identity.verifiedAt).toLocaleString(locale, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone: "America/Bogota",
+      }),
     ],
   ];
   return (
