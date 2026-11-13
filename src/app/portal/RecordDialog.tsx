@@ -75,7 +75,8 @@ export function RecordDialog({
     try {
       setStep("preparing");
       const prepared = await fetch(`/api/portal/${kind === "gasto" ? "gastos" : "hitos"}/preparar`, { method: "POST", body: form });
-      const prep = (await prepared.json()) as { id: string; xdr: string; networkPassphrase: string } & ApiError;
+      // Si el cuerpo no es JSON (la página HTML de un 502/504), queda vacío y se usa el mensaje propio.
+      const prep = (await prepared.json().catch(() => ({}))) as { id: string; xdr: string; networkPassphrase: string } & ApiError;
       if (!prepared.ok) throw new Error(prep.error?.message ?? t("ong.registrar.error.preparar"));
 
       setStep("signing");
@@ -95,14 +96,16 @@ export function RecordDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ kind, id: prep.id, signedXdr }),
       });
-      const sent = (await sentResponse.json()) as { status: string; txHash: string | null } & ApiError;
+      const sent = (await sentResponse.json().catch(() => ({}))) as { status: string; txHash: string | null } & ApiError;
       if (!sentResponse.ok && sentResponse.status !== 202) throw new Error(sent.error?.message ?? t("ong.registrar.error.enviar"));
 
       setStep("confirming");
       let result = sent;
       for (let i = 0; result.status === "enviada" && i < 24; i++) {
         await new Promise((r) => setTimeout(r, 2500));
-        result = (await fetch(`/api/portal/registros/${kind}/${prep.id}`).then((r) => r.json())) as typeof sent;
+        // Un error pasajero (red caída, 5xx) no cambia el estado ni borra el hash: se vuelve a consultar.
+        const check = await fetch(`/api/portal/registros/${kind}/${prep.id}`).catch(() => null);
+        if (check?.ok) result = (await check.json()) as typeof sent;
       }
       if (result.status === "fallida") throw new Error(t("ong.registrar.error.fallida"));
       setDone({ txHash: result.txHash, status: result.status });

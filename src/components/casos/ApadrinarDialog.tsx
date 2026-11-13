@@ -44,7 +44,8 @@ const AMOUNT = /^\d+([.,]\d{1,7})?$/;
 
 async function postJson<T>(url: string, body: unknown): Promise<{ ok: boolean; status: number; data: T }> {
   const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  return { ok: response.ok, status: response.status, data: (await response.json()) as T };
+  // Si el cuerpo no es JSON (la página HTML de un 502/504), queda vacío y quien llama usa su mensaje propio.
+  return { ok: response.ok, status: response.status, data: (await response.json().catch(() => ({}))) as T };
 }
 
 type ApiError = { error?: { message: string } };
@@ -146,7 +147,10 @@ export function ApadrinarDialog({
       setStep("confirming");
       for (let i = 0; status === "enviada" && i < 24; i++) {
         await new Promise((r) => setTimeout(r, 2500));
-        const check = await fetch(`/api/aportes/${sent.data.txHash}`).then((r) => r.json() as Promise<{ status: string; message?: string }>);
+        // Un error pasajero (red caída, 5xx) no cambia el estado: se vuelve a consultar.
+        const response = await fetch(`/api/aportes/${sent.data.txHash}`).catch(() => null);
+        if (!response?.ok) continue;
+        const check = (await response.json()) as { status: string; message?: string };
         status = check.status;
         if (status === "fallida") throw new Error(check.message ?? t("casos.apadrinar.error.rechazado"));
       }
