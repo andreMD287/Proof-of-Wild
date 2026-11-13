@@ -16,6 +16,15 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
+import type {
+  TextosCaso,
+  TextosEtapa,
+  TextosGasto,
+  TextosHito,
+  TextosOng,
+  TextosVoluntariado,
+  Traducciones,
+} from "@/i18n/contenido";
 
 /**
  * Esquema fuera de la red (brief, «Modelo de datos»). El dinero y los hashes viven en el contrato Soroban;
@@ -51,6 +60,12 @@ export const identityMethod = pgEnum("identity_method", ["biometria", "simulada"
 const id = () => uuid("id").primaryKey().defaultRandom();
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const money = (name: string) => numeric(name, { precision: 20, scale: 7 });
+/**
+ * Traducciones de lo que escribe la ONG, `{ en: { campo: texto }, pt: { … } }` (ADR-23). Las columnas normales
+ * guardan el texto original; sin traducción, la página lo muestra tal cual.
+ */
+const translations = <T extends object>() =>
+  jsonb("translations").$type<Traducciones<T>>().notNull().default({});
 const hex64 = (column: unknown) => sql`${column} ~ '^[0-9a-f]{64}$'`;
 const stellarAccount = (column: unknown) => sql`${column} ~ '^G[A-Z2-7]{55}$'`;
 
@@ -187,6 +202,7 @@ export const ngos = pgTable(
     foundedYear: integer("founded_year"),
     description: text("description").notNull(),
     environmentalPermit: text("environmental_permit"),
+    translations: translations<TextosOng>(),
     contactName: text("contact_name").notNull(),
     contactEmail: text("contact_email").notNull(),
     contactPhone: text("contact_phone").notNull(),
@@ -252,6 +268,7 @@ export const cases = pgTable(
     speciesPublic: boolean("species_public").notNull().default(true),
     shortStory: text("short_story").notNull(),
     story: text("story").notNull(),
+    translations: translations<TextosCaso>(),
     photoPath: text("photo_path"),
     intakeDate: date("intake_date").notNull(),
     status: caseStatus("status").notNull().default("activo"),
@@ -283,6 +300,7 @@ export const stages = pgTable(
     /** Nombre corto para el chip de etapa, por ejemplo «Cuidados especiales». */
     shortName: text("short_name").notNull(),
     covers: text("covers"),
+    translations: translations<TextosEtapa>(),
     cost: money("cost").notNull(),
     photoPath: text("photo_path"),
     status: stageStatus("status").notNull().default("pendiente"),
@@ -378,6 +396,7 @@ export const expenses = pgTable(
     category: expenseCategory("category").notNull(),
     /** Concepto corto, por ejemplo «Revisión antes de liberar». Sin concepto se muestra el nombre de la etapa. */
     concept: text("concept"),
+    translations: translations<TextosGasto>(),
     amount: money("amount").notNull(),
     occurredOn: date("occurred_on").notNull(),
     invoiceNumber: text("invoice_number").notNull(),
@@ -411,6 +430,7 @@ export const milestones = pgTable(
       .references(() => stages.id),
     occurredOn: date("occurred_on").notNull(),
     description: text("description").notNull(),
+    translations: translations<TextosHito>(),
     /** Clave del archivo en el almacén de evidencias o ruta en public/ para los datos de prueba. */
     photoKey: text("photo_key"),
     evidenceHash: text("evidence_hash").notNull(),
@@ -444,6 +464,7 @@ export const volunteerings = pgTable(
     city: text("city").notNull(),
     tasks: text("tasks").array().notNull(),
     requirements: text("requirements").array().notNull(),
+    translations: translations<TextosVoluntariado>(),
     capacity: integer("capacity").notNull(),
     /** Cupos ya ocupados por inscripciones hechas fuera de la página. */
     preOccupied: integer("pre_occupied").notNull().default(0),

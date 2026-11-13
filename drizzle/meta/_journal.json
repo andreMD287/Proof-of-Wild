@@ -22,6 +22,13 @@
       "when": 1794459913089,
       "tag": "0002_verificacion_identidad",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794536028989,
+      "tag": "0003_traducciones_contenido",
+      "breakpoints": true
     }
   ]
 }
