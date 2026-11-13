@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { Keypair } from "@stellar/stellar-sdk";
-import { sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import * as srpClient from "secure-remote-password/client";
 import { fromStroops, toStroops } from "@/lib/amount";
 import { canonicalJson, sha256Hex } from "@/lib/hash";
@@ -142,6 +142,7 @@ export async function seedDemo(db: Db, options: SeedOptions = {}): Promise<SeedR
           group: demoCase.group,
           shortStory: demoCase.shortStory,
           story: demoCase.story,
+          translations: demoCase.translations,
           photoPath: demoCase.photoPath,
           intakeDate: demoCase.intakeDate,
           status: demoCase.outcome ? "recuperado" : "activo",
@@ -160,6 +161,7 @@ export async function seedDemo(db: Db, options: SeedOptions = {}): Promise<SeedR
             name: s.name,
             shortName: s.shortName,
             covers: s.covers,
+            translations: s.translations,
             cost: s.cost,
             status: s.status,
             photoPath: s.photoPath ?? null,
@@ -242,6 +244,7 @@ export async function seedDemo(db: Db, options: SeedOptions = {}): Promise<SeedR
             providerId: providerIds[e.provider]!,
             category: e.category,
             concept: e.concept ?? null,
+            translations: e.translations ?? {},
             amount: e.amount,
             occurredOn,
             invoiceNumber: e.invoiceNumber,
@@ -260,6 +263,7 @@ export async function seedDemo(db: Db, options: SeedOptions = {}): Promise<SeedR
             stageId,
             occurredOn,
             description: m.description,
+            translations: m.translations,
             photoKey: m.photoPath,
             // Sin foto, el hash es el del JSON canónico del registro.
             evidenceHash: await sha256Hex(
@@ -275,4 +279,75 @@ export async function seedDemo(db: Db, options: SeedOptions = {}): Promise<SeedR
   });
 
   return { skipped: false, generatedPassword: options.password ? null : password, generatedAccounts };
+}
+
+/**
+ * Pone las traducciones de los datos de prueba en una base que ya tiene la demo cargada (por ejemplo, la que dejó
+ * `red:preparar` antes de que existieran). Busca cada fila por lo que no cambia: el slug de la ONG, el código del
+ * caso y la posición de la etapa, el número de factura y el texto original del hito o del voluntariado. Así no toca
+ * lo que se registró en vivo durante la demo. Se puede correr las veces que haga falta.
+ */
+export async function applyDemoTranslations(db: Db): Promise<{ updated: number }> {
+  let updated = 0;
+  const count = (rows: unknown[]) => (updated += rows.length);
+  await db.transaction(async (tx) => {
+    for (const ngo of DEMO_NGOS) {
+      count(
+        await tx
+          .update(ngos)
+          .set({ translations: ngo.translations })
+          .where(eq(ngos.slug, ngo.slug))
+          .returning({ id: ngos.id }),
+      );
+      const [row] = await tx.select({ id: ngos.id }).from(ngos).where(eq(ngos.slug, ngo.slug)).limit(1);
+      if (!row) continue;
+      for (const v of DEMO_VOLUNTEERINGS.filter((x) => x.ngo === ngo.key)) {
+        count(
+          await tx
+            .update(volunteerings)
+            .set({ translations: v.translations })
+            .where(and(eq(volunteerings.ngoId, row.id), eq(volunteerings.title, v.title)))
+            .returning({ id: volunteerings.id }),
+        );
+      }
+    }
+
+    for (const demoCase of DEMO_CASES) {
+      const [row] = await tx
+        .update(cases)
+        .set({ translations: demoCase.translations })
+        .where(eq(cases.code, demoCase.code))
+        .returning({ id: cases.id });
+      if (!row) continue;
+      count([row]);
+      for (const [i, stage] of demoCase.stages.entries()) {
+        const [stageRow] = await tx
+          .update(stages)
+          .set({ translations: stage.translations })
+          .where(and(eq(stages.caseId, row.id), eq(stages.position, i + 1)))
+          .returning({ id: stages.id });
+        if (!stageRow) continue;
+        count([stageRow]);
+        if (stage.expense?.translations) {
+          count(
+            await tx
+              .update(expenses)
+              .set({ translations: stage.expense.translations })
+              .where(and(eq(expenses.stageId, stageRow.id), eq(expenses.invoiceNumber, stage.expense.invoiceNumber)))
+              .returning({ id: expenses.id }),
+          );
+        }
+        if (stage.milestone) {
+          count(
+            await tx
+              .update(milestones)
+              .set({ translations: stage.milestone.translations })
+              .where(and(eq(milestones.stageId, stageRow.id), eq(milestones.description, stage.milestone.description)))
+              .returning({ id: milestones.id }),
+          );
+        }
+      }
+    }
+  });
+  return { updated };
 }

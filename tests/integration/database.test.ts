@@ -1,7 +1,7 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
@@ -20,9 +20,12 @@ import {
 import type { Db } from "@/platform/db/client";
 import { DbCatalogReader } from "@/platform/db/repositories/catalog";
 import { DbContributionStore } from "@/platform/db/repositories/contributions";
+import { getDonorView } from "@/platform/db/repositories/donor";
+import { getPublicNgo } from "@/platform/db/repositories/ngo-profile";
 import { getPortalData } from "@/platform/db/repositories/portal";
+import { listVolunteerings } from "@/platform/db/repositories/volunteering";
 import * as schema from "@/platform/db/schema";
-import { resetDemo, seedDemo } from "@/platform/db/seed-demo";
+import { applyDemoTranslations, resetDemo, seedDemo } from "@/platform/db/seed-demo";
 import { sha256Hex } from "@/lib/hash";
 import { DbEvidenceStorage } from "@/platform/storage/db-storage";
 import { LocalEvidenceStorage } from "@/platform/storage/local-storage";
@@ -133,6 +136,147 @@ describe.skipIf(!url)("integración con PostgreSQL", () => {
     it("devuelve nulo para un código inexistente o con formato inválido", async () => {
       expect(await catalog.caseDetail("POW_999", "es")).toBeNull();
       expect(await catalog.caseDetail("POW-001", "es")).toBeNull();
+    });
+  });
+
+  describe("contenido de las ONG en otros idiomas", () => {
+    const alasId = async () =>
+      (await db.select({ id: schema.ngos.id }).from(schema.ngos).where(eq(schema.ngos.slug, "refugio-alas-libres")))[0]!.id;
+    const donorAccount = async (alias: string) =>
+      (await db.select({ account: schema.donors.stellarAccount }).from(schema.donors).where(eq(schema.donors.alias, alias)))[0]!
+        .account;
+
+    it("la lista de casos sale en inglés y en español queda como la escribió la ONG", async () => {
+      const [en] = await catalog.listCases("en");
+      expect(en).toMatchObject({
+        commonName: "Scarlet macaw",
+        shortStory: "It arrived at the center with a broken wing.",
+        chip: { label: "Medication" },
+        needs: ["Medication for the wing", "Special care and adapted enclosure", "Flight rehabilitation", "Release and follow-up"],
+      });
+      expect(en!.route.map((s) => s.shortName)).toEqual(["Medication", "Special care", "Flight rehabilitation", "Release"]);
+      const [es] = await catalog.listCases("es");
+      expect(es).toMatchObject({ commonName: "Guacamaya roja", shortStory: "Llegó al centro con un ala rota.", chip: { label: "Medicamento" } });
+    });
+
+    it("el detalle traduce historia, etapas, hitos y conceptos de gasto; sin concepto, el gasto lleva la etapa traducida", async () => {
+      const d = (await catalog.caseDetail("POW_003", "pt"))!;
+      expect(d.commonName).toBe("Gambá-comum");
+      expect(d.story).toMatch(/^Alguns vizinhos a encontraram/);
+      expect(d.stages.map((s) => s.name)).toEqual([
+        "Leite especial e calor",
+        "Alimentação e crescimento",
+        "Treinamento em recinto externo",
+        "Soltura",
+      ]);
+      expect(d.stages[0]!.covers).toBe("Leite especial para filhotes e fonte de calor");
+      expect(d.stages[3]!.milestones[0]!.description).toBe("Solta em uma floresta da região.");
+      expect(d.transparency.expenses.map((e) => [e.stageName, e.concept])).toEqual([
+        ["Soltura", "Revisão final"],
+        ["Treinamento em recinto externo", "Treinamento em recinto externo"],
+        ["Alimentação e crescimento", "Alimentação e crescimento"],
+        ["Leite especial e calor", "Leite especial e calor"],
+      ]);
+      const es = (await catalog.caseDetail("POW_003", "es"))!;
+      expect(es.transparency.expenses[0]).toMatchObject({ stageName: "Liberación", concept: "Revisión final" });
+      expect(es.stages[3]!.milestones[0]!.description).toBe("Liberada en un bosque de la región.");
+    });
+
+    it("las traducciones no salen como dato aparte ni cuelan datos privados", async () => {
+      const json = JSON.stringify([
+        await catalog.caseDetail("POW_004", "en"),
+        await catalog.listCases("pt"),
+        await getPublicNgo(db, "refugio-alas-libres", "en"),
+        await listVolunteerings(db, "pt", "2026-11-10"),
+      ]);
+      expect(json).not.toContain("translations");
+      expect(json).not.toContain("@");
+      expect(json).not.toContain("900.000");
+      expect(json).not.toContain("+57");
+    });
+
+    it("el comprobante traduce el nombre del caso y las etapas del reparto", async () => {
+      const receipt = (await catalog.receipt(await sha256Hex("pow-demo:aporte:7"), "en"))!;
+      expect(receipt.caseName).toBe("Common opossum");
+      expect(receipt.allocations.map((a) => a.stageName)).toEqual(["Special milk and warmth", "Feeding and growth"]);
+    });
+
+    it("el perfil de la ONG traduce su descripción y sus últimos gastos", async () => {
+      const ngo = (await getPublicNgo(db, "refugio-alas-libres", "pt"))!;
+      expect(ngo.description).toBe("Reabilitamos aves resgatadas do tráfico ilegal nos Llanos até que possam voltar a voar.");
+      expect(ngo.recentExpenses.map((e) => e.label)).toEqual([
+        "Revisão antes da soltura",
+        "Tela e poleiros do viveiro",
+        "Dieta com vitaminas e recinto",
+        "Avaliação e vermifugação",
+      ]);
+      expect((await getPublicNgo(db, "refugio-alas-libres", "es"))!.recentExpenses[0]!.label).toBe("Revisión antes de liberar");
+    });
+
+    it("los voluntariados traducen título, horario, tareas y requisitos", async () => {
+      const [bosque, alas] = await listVolunteerings(db, "en", "2026-11-10");
+      expect(bosque).toMatchObject({
+        title: "Shelter care day",
+        schedule: "8:00 a.m. to 1:00 p.m.",
+        requirements: ["18 or older", "Comfortable clothes", "Closed-toe shoes"],
+        city: "Fusagasugá",
+      });
+      expect(alas!.tasks).toEqual(["Clean and disinfect feeders", "Cut fruit for the birds' diet", "Repair perches in empty aviaries"]);
+      expect((await listVolunteerings(db, "es", "2026-11-10"))[0]!.title).toBe("Jornada de cuidado del refugio");
+    });
+
+    it("la huella del donante traduce casos, etapas y la última actualización", async () => {
+      const daniel = await getDonorView(db, await donorAccount("Daniel P."), "en");
+      expect(daniel.cases.map((c) => [c.name, c.lastUpdate?.kind, c.lastUpdate?.text])).toEqual([
+        ["Common opossum", "hito", "Released in a forest in the region."],
+        ["Yellow-crowned amazon", "hito", "Released alongside other parrots."],
+      ]);
+      expect(daniel.cases[1]!.allocations.map((a) => a.stageName)).toEqual(["Vitamin-rich diet and enclosure", "Flight training"]);
+      // Gasto sin concepto e hito del mismo día: la página arma «la ONG pagó …» con la etapa traducida.
+      const camila = await getDonorView(db, await donorAccount("Camila R."), "pt");
+      expect(camila.cases[0]!.lastUpdate).toMatchObject({ kind: "gasto", text: "Avaliação e exames" });
+    });
+
+    it("el portal de la ONG muestra la etapa pendiente en su idioma", async () => {
+      const portal = (await getPortalData(db, await alasId(), "pt"))!;
+      const fotos = portal.pending.flatMap((p) => (p.kind === "subir_foto" ? [[p.stage, p.stageName, p.caseCode]] : []));
+      expect(fotos).toEqual([[1, "Medicamento para a asa", "POW_001"]]);
+    });
+
+    it("carga las traducciones de la demo en una base ya sembrada sin tocar lo registrado en vivo", async () => {
+      const [guacamaya] = await db
+        .select({ id: schema.cases.id, stageId: schema.stages.id })
+        .from(schema.cases)
+        .innerJoin(schema.stages, eq(schema.stages.caseId, schema.cases.id))
+        .where(and(eq(schema.cases.code, "POW_001"), eq(schema.stages.position, 1)));
+      const [enVivo] = await db
+        .insert(schema.milestones)
+        .values({
+          caseId: guacamaya!.id,
+          stageId: guacamaya!.stageId,
+          occurredOn: "2026-11-13",
+          description: "Hito registrado en vivo",
+          evidenceHash: "b".repeat(64),
+        })
+        .returning({ id: schema.milestones.id });
+      try {
+        for (const table of [schema.ngos, schema.cases, schema.stages, schema.expenses, schema.milestones, schema.volunteerings]) {
+          await db.update(table).set({ translations: {} });
+        }
+        expect((await catalog.listCases("en"))[0]!.commonName).toBe("Guacamaya roja");
+
+        // 2 ONG, 2 voluntariados, 5 casos, 20 etapas, 4 gastos con concepto y 13 hitos de los datos de prueba.
+        expect(await applyDemoTranslations(db)).toEqual({ updated: 46 });
+        expect(await applyDemoTranslations(db)).toEqual({ updated: 46 });
+        expect((await catalog.listCases("en"))[0]!.commonName).toBe("Scarlet macaw");
+        const [vivo] = await db
+          .select({ translations: schema.milestones.translations })
+          .from(schema.milestones)
+          .where(eq(schema.milestones.id, enVivo!.id));
+        expect(vivo!.translations).toEqual({});
+      } finally {
+        await db.delete(schema.milestones).where(eq(schema.milestones.id, enVivo!.id));
+      }
     });
   });
 
