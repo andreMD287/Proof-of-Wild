@@ -27,6 +27,7 @@ const caseColumns = {
   speciesPublic: cases.speciesPublic,
   shortStory: cases.shortStory,
   story: cases.story,
+  translations: cases.translations,
   photoPath: cases.photoPath,
   intakeDate: cases.intakeDate,
   status: cases.status,
@@ -95,6 +96,7 @@ export class DbCatalogReader implements CatalogReader {
           providerName: providers.name,
           category: expenses.category,
           concept: expenses.concept,
+          translations: expenses.translations,
           amount: expenses.amount,
           occurredOn: expenses.occurredOn,
           invoiceNumber: expenses.invoiceNumber,
@@ -110,6 +112,7 @@ export class DbCatalogReader implements CatalogReader {
           stageId: milestones.stageId,
           occurredOn: milestones.occurredOn,
           description: milestones.description,
+          translations: milestones.translations,
           photoKey: milestones.photoKey,
           txHash: milestones.txHash,
           validationLevel: milestones.validationLevel,
@@ -142,6 +145,7 @@ export class DbCatalogReader implements CatalogReader {
         txHash: contributions.txHash,
         caseCode: cases.code,
         commonName: cases.commonName,
+        caseTranslations: cases.translations,
         speciesPublic: cases.speciesPublic,
         photoPath: cases.photoPath,
         ngoName: ngos.name,
@@ -156,7 +160,12 @@ export class DbCatalogReader implements CatalogReader {
       .limit(1);
     if (!row || !row.confirmedAt) return null;
     const allocations = await this.db
-      .select({ position: stages.position, stageName: stages.name, amount: contributionAllocations.amount })
+      .select({
+        position: stages.position,
+        stageName: stages.name,
+        stageTranslations: stages.translations,
+        amount: contributionAllocations.amount,
+      })
       .from(contributionAllocations)
       .innerJoin(stages, eq(stages.id, contributionAllocations.stageId))
       .where(eq(contributionAllocations.contributionId, row.id))
@@ -193,6 +202,7 @@ export class DbCatalogReader implements CatalogReader {
           name: stages.name,
           shortName: stages.shortName,
           covers: stages.covers,
+          translations: stages.translations,
           cost: stages.cost,
           photoPath: stages.photoPath,
           status: stages.status,

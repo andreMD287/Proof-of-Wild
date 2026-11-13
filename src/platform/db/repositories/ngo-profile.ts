@@ -1,8 +1,13 @@
 import { and, desc, eq, sql } from "drizzle-orm";
+import type { Idioma } from "@/i18n/config";
+import { traducir } from "@/i18n/contenido";
 import type { Db } from "../client";
 import { cases, contributions, expenses, ngos, providers, stages } from "../schema";
 
-/** Perfil público de una ONG aprobada: sin NIT, correo ni teléfono de contacto. */
+/**
+ * Perfil público de una ONG aprobada: sin NIT, correo ni teléfono de contacto. La descripción y los gastos salen en el
+ * idioma pedido si la ONG los tradujo.
+ */
 export interface PublicNgo {
   slug: string;
   name: string;
@@ -17,7 +22,7 @@ export interface PublicNgo {
   recentExpenses: Array<{ label: string; caseCode: string; amount: string; txHash: string }>;
 }
 
-export async function getPublicNgo(db: Db, slug: string): Promise<PublicNgo | null> {
+export async function getPublicNgo(db: Db, slug: string, idioma: Idioma): Promise<PublicNgo | null> {
   const [ngo] = await db
     .select()
     .from(ngos)
@@ -43,7 +48,9 @@ export async function getPublicNgo(db: Db, slug: string): Promise<PublicNgo | nu
   const recent = await db
     .select({
       concept: expenses.concept,
+      conceptTranslations: expenses.translations,
       stageName: stages.name,
+      stageTranslations: stages.translations,
       providerName: providers.name,
       caseCode: cases.code,
       amount: expenses.amount,
@@ -63,13 +70,15 @@ export async function getPublicNgo(db: Db, slug: string): Promise<PublicNgo | nu
     kind: ngo.kind,
     city: ngo.city,
     foundedYear: ngo.foundedYear,
-    description: ngo.description,
+    description: traducir({ description: ngo.description }, ngo.translations, idioma).description,
     stellarAccount: ngo.stellarAccount,
     photoPath: ngo.photoPath,
     offersVolunteering: ngo.offersVolunteering,
     totals: { received: received?.total ?? "0", spent: spent?.total ?? "0", spentWithInvoice: spent?.withInvoice ?? "0" },
     recentExpenses: recent.map((r) => ({
-      label: r.concept ?? r.stageName,
+      label:
+        traducir({ concept: r.concept }, r.conceptTranslations, idioma).concept ??
+        traducir({ name: r.stageName }, r.stageTranslations, idioma).name,
       caseCode: r.caseCode,
       amount: r.amount,
       txHash: r.txHash ?? "",

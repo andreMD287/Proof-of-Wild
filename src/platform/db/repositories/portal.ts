@@ -1,4 +1,6 @@
 import { and, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import type { Idioma } from "@/i18n/config";
+import { traducir } from "@/i18n/contenido";
 import { stageStatusesFromFunding, type StageStatus } from "@/modules/cases";
 import type { Db } from "../client";
 import {
@@ -19,7 +21,7 @@ export interface PortalRecord {
   caseCode: string;
   /** Etapa del gasto o del hito; nula en un aporte. */
   stage: number | null;
-  /** Proveedor del gasto o descripción del hito, tal como están en la base; nulo en un aporte. */
+  /** Proveedor del gasto o descripción del hito (en el idioma pedido si la ONG la tradujo); nulo en un aporte. */
   text: string | null;
   amount: string | null;
   status: "presentado" | "revisado" | "verificado_independiente" | "en_la_red" | "por_confirmar";
@@ -46,7 +48,7 @@ export type PortalPending =
   | { kind: "por_confirmar"; record: "gasto" | "hito"; caseCode: string; tone: "espera" };
 
 /** Lo que ve una ONG en su portal (pantalla 9). Solo sus casos. */
-export async function getPortalData(db: Db, ngoId: string): Promise<PortalData | null> {
+export async function getPortalData(db: Db, ngoId: string, idioma: Idioma): Promise<PortalData | null> {
   const [ngo] = await db
     .select({ id: ngos.id, name: ngos.name, slug: ngos.slug, stellarAccount: ngos.stellarAccount })
     .from(ngos)
@@ -106,6 +108,7 @@ export async function getPortalData(db: Db, ngoId: string): Promise<PortalData |
         at: milestones.createdAt,
         stage: stages.position,
         description: milestones.description,
+        translations: milestones.translations,
         status: milestones.status,
         level: milestones.validationLevel,
         txHash: milestones.txHash,
@@ -117,7 +120,14 @@ export async function getPortalData(db: Db, ngoId: string): Promise<PortalData |
       .orderBy(desc(milestones.createdAt))
       .limit(20),
     db
-      .select({ id: stages.id, caseId: stages.caseId, position: stages.position, name: stages.name, cost: stages.cost })
+      .select({
+        id: stages.id,
+        caseId: stages.caseId,
+        position: stages.position,
+        name: stages.name,
+        translations: stages.translations,
+        cost: stages.cost,
+      })
       .from(stages)
       .where(inArray(stages.caseId, ids)),
     db
@@ -163,7 +173,7 @@ export async function getPortalData(db: Db, ngoId: string): Promise<PortalData |
         kind: "hito" as const,
         caseCode: codeOf.get(m.caseId) ?? "",
         stage: m.stage,
-        text: m.description,
+        text: traducir({ description: m.description }, m.translations, idioma).description,
         amount: null,
         status: status(m.status, m.level),
         txHash: m.txHash,
@@ -190,7 +200,7 @@ export async function getPortalData(db: Db, ngoId: string): Promise<PortalData |
       .map((s) => ({
         kind: "subir_foto" as const,
         stage: s.position,
-        stageName: s.name,
+        stageName: traducir({ name: s.name }, s.translations, idioma).name,
         caseCode: codeOf.get(s.caseId) ?? "",
         tone: "accion" as const,
       })),

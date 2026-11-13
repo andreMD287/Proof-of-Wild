@@ -64,7 +64,7 @@ describe.skipIf(!url)("integración con PostgreSQL", () => {
 
   describe("catálogo público", () => {
     it("lista primero los casos en tratamiento y después los recuperados", async () => {
-      const cases = await catalog.listCases();
+      const cases = await catalog.listCases("es");
       expect(cases.map((c) => c.code)).toEqual(["POW_001", "POW_002", "POW_003", "POW_004", "POW_005"]);
       expect(cases.map((c) => c.recovered)).toEqual([false, false, true, true, true]);
       // Antes del aporte en vivo la guacamaya está en 0: su etapa actual es la 1 (pasa a «Cuidados especiales»
@@ -73,21 +73,21 @@ describe.skipIf(!url)("integración con PostgreSQL", () => {
     });
 
     it("el estado de cada etapa sale de lo cubierto: la guacamaya en 0 no muestra la etapa 1 completada", async () => {
-      const d = (await catalog.caseDetail("POW_001"))!;
+      const d = (await catalog.caseDetail("POW_001", "es"))!;
       expect(d.stages.map((s) => [s.status, s.covered])).toEqual([
         ["en_curso", "0.0000000"],
         ["pendiente", "0.0000000"],
         ["pendiente", "0.0000000"],
         ["pendiente", "0.0000000"],
       ]);
-      const tortuga = (await catalog.caseDetail("POW_002"))!;
+      const tortuga = (await catalog.caseDetail("POW_002", "es"))!;
       expect(tortuga.stages.map((s) => s.status)).toEqual(["completada", "en_curso", "pendiente", "pendiente"]);
     });
 
     it("la foto de una etapa se ve cuando la etapa ya empezó, no mientras está pendiente", async () => {
-      const guacamaya = (await catalog.caseDetail("POW_001"))!;
+      const guacamaya = (await catalog.caseDetail("POW_001", "es"))!;
       expect(guacamaya.stages.map((s) => s.photoUrl)).toEqual(["/fotos/etapas/pow_001-etapa-1.webp", null, null, null]);
-      const zarigueya = (await catalog.caseDetail("POW_003"))!;
+      const zarigueya = (await catalog.caseDetail("POW_003", "es"))!;
       expect(zarigueya.stages.map((s) => s.photoUrl)).toEqual([1, 2, 3, 4].map((n) => `/fotos/etapas/pow_003-etapa-${n}.webp`));
     });
 
@@ -96,13 +96,13 @@ describe.skipIf(!url)("integración con PostgreSQL", () => {
         .select({ id: schema.ngos.id })
         .from(schema.ngos)
         .where(eq(schema.ngos.slug, "refugio-alas-libres"));
-      const portal = (await getPortalData(db, alas!.id))!;
+      const portal = (await getPortalData(db, alas!.id, "es"))!;
       const fotos = portal.pending.flatMap((p) => (p.kind === "subir_foto" ? [[p.stage, p.stageName, p.caseCode]] : []));
       expect(fotos).toEqual([[1, "Medicamento para el ala", "POW_001"]]);
     });
 
     it("el detalle cuadra con los datos de prueba: tortuga con 35 recibidos, 25 gastados y 10 disponibles", async () => {
-      const d = (await catalog.caseDetail("POW_002"))!;
+      const d = (await catalog.caseDetail("POW_002", "es"))!;
       expect(d.transparency).toMatchObject({ received: "35.0000000", spent: "25.0000000", available: "10.0000000" });
       expect(d.stages.map((s) => [s.covered, s.cost])).toEqual([
         ["25.0000000", "25.0000000"],
@@ -116,7 +116,7 @@ describe.skipIf(!url)("integración con PostgreSQL", () => {
     });
 
     it("no expone identificadores internos, correos, NIT ni teléfonos", async () => {
-      const json = JSON.stringify([await catalog.caseDetail("POW_004"), await catalog.listCases()]);
+      const json = JSON.stringify([await catalog.caseDetail("POW_004", "es"), await catalog.listCases("es")]);
       const internalIds = [
         ...(await db.select({ id: schema.cases.id }).from(schema.cases)),
         ...(await db.select({ id: schema.stages.id }).from(schema.stages)),
@@ -131,8 +131,8 @@ describe.skipIf(!url)("integración con PostgreSQL", () => {
     });
 
     it("devuelve nulo para un código inexistente o con formato inválido", async () => {
-      expect(await catalog.caseDetail("POW_999")).toBeNull();
-      expect(await catalog.caseDetail("POW-001")).toBeNull();
+      expect(await catalog.caseDetail("POW_999", "es")).toBeNull();
+      expect(await catalog.caseDetail("POW-001", "es")).toBeNull();
     });
   });
 

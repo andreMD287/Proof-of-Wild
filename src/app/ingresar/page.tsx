@@ -7,7 +7,7 @@ import { Logo } from "@/components/sitio/Logo";
 import { SelectorIdioma } from "@/components/sitio/SelectorIdioma";
 import { TestnetBadge } from "@/components/ui";
 import { quitarIdioma } from "@/i18n/config";
-import { getT, redirigir } from "@/i18n/servidor";
+import { getIdioma, getT, redirigir } from "@/i18n/servidor";
 import { getCatalogService } from "@/platform/container";
 import { AccountForms } from "./AccountForms";
 
@@ -24,7 +24,7 @@ const LINEAS = ["cuenta.ingresar.linea.donantes", "cuenta.ingresar.linea.volunta
 async function sponsoredCase(volver: string | undefined, sinNombre: string) {
   const code = quitarIdioma(volver ?? "").match(/^\/casos\/(POW_\d{3,6})\?(?:.*&)?apadrinar=1/)?.[1];
   if (!code) return null;
-  const detail = await getCatalogService().caseDetail(code);
+  const detail = await getCatalogService().caseDetail(code, await getIdioma());
   return detail ? { name: detail.commonName ?? sinNombre, photoUrl: detail.photoUrl } : null;
 }
 

@@ -3,6 +3,7 @@ import { CasosSeccion } from "@/components/inicio/CasosSeccion";
 import { ComoFunciona } from "@/components/inicio/ComoFunciona";
 import { Portada } from "@/components/inicio/Portada";
 import { VoluntariadosSeccion } from "@/components/inicio/VoluntariadosSeccion";
+import { getIdioma } from "@/i18n/servidor";
 import { explorerContractUrl } from "@/lib/explorer";
 import { getExplorerEnv } from "@/platform/config/env";
 import { getCatalogService } from "@/platform/container";
@@ -21,11 +22,12 @@ type Props = { searchParams: Promise<{ inscribirme?: string }> };
  */
 export default async function InicioPage({ searchParams }: Props) {
   const db = getDb();
+  const idioma = await getIdioma();
   const [{ inscribirme }, session, cases, volunteerings] = await Promise.all([
     searchParams,
     getSession(),
-    getCatalogService().listCases(),
-    listVolunteerings(db),
+    getCatalogService().listCases(idioma),
+    listVolunteerings(db, idioma),
   ]);
   const selected = volunteerings.find((v) => v.id === inscribirme);
   const defaults =

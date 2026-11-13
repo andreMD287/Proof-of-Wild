@@ -171,7 +171,7 @@ export async function DonorSections({
   /** Ruta de cada caso por código, para dibujarla junto a lo que aportó esta billetera. */
   routes?: Map<string, RouteStage[]>;
 }) {
-  const { t, ruta, formatAmount, formatDate, formatShortDate } = await getT();
+  const { t, ruta, locale, formatAmount, formatDate, formatShortDate } = await getT();
 
   if (view.cases.length === 0 && view.volunteerings.length === 0) {
     return (
@@ -231,7 +231,9 @@ export async function DonorSections({
                     {c.lastUpdate ? (
                       <p className="pt-2">
                         <strong>{t("huella.casos.ultimaActualizacion")}</strong> {formatShortDate(c.lastUpdate.at)} ·{" "}
-                        {c.lastUpdate.text}
+                        {c.lastUpdate.kind === "gasto"
+                          ? t("huella.casos.ongPago", { concepto: c.lastUpdate.text.toLocaleLowerCase(locale) })
+                          : c.lastUpdate.text}
                       </p>
                     ) : null}
                   </div>

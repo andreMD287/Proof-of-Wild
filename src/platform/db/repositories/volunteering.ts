@@ -1,4 +1,6 @@
 import { and, asc, count, eq, gte } from "drizzle-orm";
+import type { Idioma } from "@/i18n/config";
+import { traducir } from "@/i18n/contenido";
 import type { Db } from "../client";
 import { enrollments, ngos, personProfiles, users, volunteerings } from "../schema";
 
@@ -17,8 +19,15 @@ export interface PublicVolunteering {
   photoPath: string | null;
 }
 
-/** Voluntariados próximos de las ONG aprobadas, con los cupos ocupados (los previos más las inscripciones). */
-export async function listVolunteerings(db: Db, today = new Date().toISOString().slice(0, 10)): Promise<PublicVolunteering[]> {
+/**
+ * Voluntariados próximos de las ONG aprobadas, con los cupos ocupados (los previos más las inscripciones). El título,
+ * el horario, las tareas y los requisitos salen en el idioma pedido si la ONG los tradujo.
+ */
+export async function listVolunteerings(
+  db: Db,
+  idioma: Idioma,
+  today = new Date().toISOString().slice(0, 10),
+): Promise<PublicVolunteering[]> {
   const rows = await db
     .select({
       id: volunteerings.id,
@@ -30,6 +39,7 @@ export async function listVolunteerings(db: Db, today = new Date().toISOString()
       city: volunteerings.city,
       tasks: volunteerings.tasks,
       requirements: volunteerings.requirements,
+      translations: volunteerings.translations,
       capacity: volunteerings.capacity,
       preOccupied: volunteerings.preOccupied,
       photoPath: volunteerings.photoPath,
@@ -45,8 +55,9 @@ export async function listVolunteerings(db: Db, today = new Date().toISOString()
     .groupBy(enrollments.volunteeringId);
   const takenBy = new Map(taken.map((t) => [t.volunteeringId, t.n]));
 
-  return rows.map(({ ngoSlug, ngoName, preOccupied, ...v }) => ({
+  return rows.map(({ ngoSlug, ngoName, preOccupied, translations, ...v }) => ({
     ...v,
+    ...traducir({ title: v.title, schedule: v.schedule, tasks: v.tasks, requirements: v.requirements }, translations, idioma),
     ngo: { slug: ngoSlug, name: ngoName },
     occupied: Math.min(v.capacity, preOccupied + (takenBy.get(v.id) ?? 0)),
   }));

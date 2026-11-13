@@ -7,7 +7,7 @@ import { ContourField } from "@/components/mapa/ContourField";
 import { RouteMap } from "@/components/mapa/RouteMap";
 import { Reveal } from "@/components/movimiento/Reveal";
 import { buttonClass, Chip, EmptyState, ExplorerLink } from "@/components/ui";
-import { getT } from "@/i18n/servidor";
+import { getIdioma, getT } from "@/i18n/servidor";
 import type { Traductor } from "@/i18n/traductor";
 import { explorerTxUrl } from "@/lib/explorer";
 import { fromStroops, sumAmounts, toStroops } from "@/lib/amount";
@@ -51,13 +51,14 @@ export default async function PortalPage({ searchParams }: Props) {
   const session = await requireSession("/portal", "ong");
   const { registrar, caso } = await searchParams;
   const db = getDb();
-  const data = await getPortalData(db, session.ngoId!);
+  const idioma = await getIdioma();
+  const data = await getPortalData(db, session.ngoId!, idioma);
   if (!data) return null;
   const tr = await getT();
   const { t, ruta, formatAmount, formatShortDate } = tr;
 
   const explorer = getExplorerEnv().EXPLORER_BASE_URL;
-  const own = (await getCatalogService().listCases()).filter((c) => c.ngo.slug === data.ngo.slug);
+  const own = (await getCatalogService().listCases(idioma)).filter((c) => c.ngo.slug === data.ngo.slug);
   const store = new DbRecordStore(db);
   const funding = await Promise.all(own.map((c) => store.caseForNgo(data.ngo.id, c.code)));
   const options: PortalCaseOption[] = own.map((c, i) => ({

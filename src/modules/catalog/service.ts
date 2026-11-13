@@ -1,13 +1,17 @@
+import type { Idioma } from "@/i18n/config";
+import { traducir } from "@/i18n/contenido";
 import { fromStroops, sumAmounts, toStroops } from "@/lib/amount";
 import { explorerTxUrl } from "@/lib/explorer";
 import { isStellarAccount } from "@/lib/stellar-account";
 import { fundingProgress, isValidCaseCode, remainingToGoal, stageStatusesFromFunding, type StageStatus } from "../cases";
 import type {
+  CaseDetailData,
   CaseOutcome,
   CaseRow,
   CaseWithFunding,
   CatalogReader,
   ExpenseCategory,
+  StageRow,
   ValidationLevel,
 } from "./repository";
 
@@ -145,6 +149,7 @@ const CATEGORIES: ExpenseCategory[] = [
 /**
  * Lado de lectura público (RF-CAT-01, RF-CAT-02). Solo construye proyecciones públicas: ningún identificador
  * interno, correo, nombre ni teléfono sale de aquí (QA-SEG-01). Las billeteras sí son públicas: están en la red.
+ * Los textos de la ONG salen en el idioma pedido cuando tienen traducción y, si no, como los escribió (ADR-23).
  */
 export class CatalogService {
   constructor(
@@ -152,22 +157,23 @@ export class CatalogService {
     private readonly config: CatalogServiceConfig,
   ) {}
 
-  async listCases(): Promise<PublicCaseSummary[]> {
+  async listCases(idioma: Idioma): Promise<PublicCaseSummary[]> {
     const rows = await this.reader.listCases();
     // Primero los casos en tratamiento; después los recuperados.
     return rows
-      .map((row) => this.summary(row))
+      .map((row) => this.summary(casoEnIdioma(row, idioma)))
       .sort((a, b) => Number(a.recovered) - Number(b.recovered) || a.code.localeCompare(b.code));
   }
 
-  async recoveredCases(): Promise<PublicCaseSummary[]> {
-    return (await this.listCases()).filter((c) => c.recovered);
+  async recoveredCases(idioma: Idioma): Promise<PublicCaseSummary[]> {
+    return (await this.listCases(idioma)).filter((c) => c.recovered);
   }
 
-  async caseDetail(code: string): Promise<PublicCaseDetail | null> {
+  async caseDetail(code: string, idioma: Idioma): Promise<PublicCaseDetail | null> {
     if (!isValidCaseCode(code)) return null;
-    const data = await this.reader.getCase(code);
-    if (!data) return null;
+    const found = await this.reader.getCase(code);
+    if (!found) return null;
+    const data = detalleEnIdioma(found, idioma);
 
     const tx = (hash: string) => explorerTxUrl(this.config.explorerBaseUrl, hash);
     const media = (keyOrPath: string | null) => (keyOrPath ? this.config.evidenceUrl(keyOrPath) : null);
@@ -270,21 +276,26 @@ export class CatalogService {
   }
 
   /** Comprobante público de un aporte confirmado (RF-COM-01): sin datos personales, solo lo que está en la red. */
-  async receipt(txHash: string): Promise<PublicReceipt | null> {
+  async receipt(txHash: string, idioma: Idioma): Promise<PublicReceipt | null> {
     if (!/^[0-9a-f]{64}$/.test(txHash)) return null;
     const row = await this.reader.getReceipt(txHash);
     if (!row) return null;
+    const { commonName } = traducir({ commonName: row.commonName }, row.caseTranslations, idioma);
     return {
       txHash: row.txHash,
       caseCode: row.caseCode,
-      caseName: row.speciesPublic ? row.commonName : "Especie reservada",
+      caseName: row.speciesPublic ? commonName : "Especie reservada",
       photoUrl: row.photoPath ? this.config.evidenceUrl(row.photoPath) : null,
       ngoName: row.ngoName,
       donorAccount: row.donorAccount,
       amount: normalize(row.amount),
       confirmedAt: row.confirmedAt.toISOString(),
       txUrl: explorerTxUrl(this.config.explorerBaseUrl, row.txHash),
-      allocations: row.allocations.map((a) => ({ ...a, amount: normalize(a.amount) })),
+      allocations: row.allocations.map((a) => ({
+        position: a.position,
+        stageName: traducir({ name: a.stageName }, a.stageTranslations, idioma).name,
+        amount: normalize(a.amount),
+      })),
     };
   }
 
@@ -335,6 +346,26 @@ export class CatalogService {
       })),
     };
   }
+}
+
+/** El caso y sus etapas con los textos en el idioma pedido. */
+function casoEnIdioma<T extends CaseWithFunding>(data: T, idioma: Idioma): T {
+  const { row } = data;
+  const textos = traducir({ commonName: row.commonName, shortStory: row.shortStory, story: row.story }, row.translations, idioma);
+  return { ...data, row: { ...row, ...textos }, stages: data.stages.map((s) => ({ ...s, ...etapaEnIdioma(s, idioma) })) };
+}
+
+/** Además del caso y sus etapas, los conceptos de los gastos y las descripciones de los hitos. */
+function detalleEnIdioma(data: CaseDetailData, idioma: Idioma): CaseDetailData {
+  return {
+    ...casoEnIdioma(data, idioma),
+    expenses: data.expenses.map((e) => ({ ...e, ...traducir({ concept: e.concept }, e.translations, idioma) })),
+    milestones: data.milestones.map((m) => ({ ...m, ...traducir({ description: m.description }, m.translations, idioma) })),
+  };
+}
+
+function etapaEnIdioma(stage: StageRow, idioma: Idioma): Pick<StageRow, "name" | "shortName" | "covers"> {
+  return traducir({ name: stage.name, shortName: stage.shortName, covers: stage.covers }, stage.translations, idioma);
 }
 
 /** Estado de cada etapa según lo cubierto, para que nunca diga «completada» con la etapa sin cubrir. */

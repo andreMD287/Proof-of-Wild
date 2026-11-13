@@ -1,8 +1,11 @@
+import type { TextosCaso, TextosEtapa, TextosGasto, TextosHito, Traducciones } from "@/i18n/contenido";
 import type { StageStatus } from "../cases";
 
 /**
  * Puerto de lectura del lado público (ADR-06): lee de la base de datos, nunca de la red.
  * Solo trae lo que ya se confirmó en la red (aportes, gastos e hitos en estado «confirmada»).
+ * Los textos de la ONG llegan como los escribió, con sus traducciones aparte (`translations`); el servicio elige el
+ * idioma de cada página.
  */
 
 export type AnimalGroup = "ave" | "mamifero" | "reptil" | "anfibio";
@@ -24,6 +27,7 @@ export interface CaseRow {
   speciesPublic: boolean;
   shortStory: string;
   story: string;
+  translations: Traducciones<TextosCaso>;
   photoPath: string | null;
   intakeDate: string;
   status: "activo" | "recuperado";
@@ -39,6 +43,7 @@ export interface StageRow {
   name: string;
   shortName: string;
   covers: string | null;
+  translations: Traducciones<TextosEtapa>;
   cost: string;
   photoPath: string | null;
   status: StageStatus;
@@ -57,6 +62,7 @@ export interface ExpenseRow {
   providerName: string;
   category: ExpenseCategory;
   concept: string | null;
+  translations: Traducciones<TextosGasto>;
   amount: string;
   occurredOn: string;
   invoiceNumber: string;
@@ -69,6 +75,7 @@ export interface MilestoneRow {
   stageId: string;
   occurredOn: string;
   description: string;
+  translations: Traducciones<TextosHito>;
   photoKey: string | null;
   txHash: string;
   validationLevel: ValidationLevel;
@@ -99,11 +106,12 @@ export interface ReceiptRow {
   txHash: string;
   caseCode: string;
   commonName: string;
+  caseTranslations: Traducciones<TextosCaso>;
   speciesPublic: boolean;
   photoPath: string | null;
   ngoName: string;
   donorAccount: string;
   amount: string;
   confirmedAt: Date;
-  allocations: Array<{ position: number; stageName: string; amount: string }>;
+  allocations: Array<{ position: number; stageName: string; stageTranslations: Traducciones<TextosEtapa>; amount: string }>;
 }

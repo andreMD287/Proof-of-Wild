@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { BadgeCard, DonorHeader, DonorSections, DonorTotals } from "@/components/huella/DonorSections";
-import { getT } from "@/i18n/servidor";
+import { getIdioma, getT } from "@/i18n/servidor";
 import { isStellarAccount, shortAccount } from "@/lib/stellar-account";
 import { getExplorerEnv } from "@/platform/config/env";
 import { evidenceUrl, getCatalogService } from "@/platform/container";
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { cuenta } = await params;
   const { t, tn } = await getT();
   if (!isStellarAccount(cuenta)) return { title: t("huella.meta.noEncontrada") };
-  const view = await getDonorView(getDb(), cuenta);
+  const view = await getDonorView(getDb(), cuenta, await getIdioma());
   const who = view.alias ?? shortAccount(cuenta);
   const title = t("huella.meta.titulo", { quien: who });
   const description = tn("huella.meta.descripcion", view.cases.length);
@@ -31,9 +31,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function HuellaPage({ params }: Props) {
   const { cuenta } = await params;
   if (!isStellarAccount(cuenta)) notFound();
+  const idioma = await getIdioma();
   const [view, cases, verified, { t }] = await Promise.all([
-    getDonorView(getDb(), cuenta),
-    getCatalogService().listCases(),
+    getDonorView(getDb(), cuenta, idioma),
+    getCatalogService().listCases(idioma),
     isAccountVerified(getDb(), cuenta),
     getT(),
   ]);

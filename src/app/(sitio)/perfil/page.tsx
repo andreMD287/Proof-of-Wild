@@ -4,7 +4,7 @@ import Link from "next/link";
 import { requireSession } from "@/app/_lib/session";
 import { BadgeCard, DonorHeader, DonorSections, DonorTotals } from "@/components/huella/DonorSections";
 import { buttonClass } from "@/components/ui";
-import { getT } from "@/i18n/servidor";
+import { getIdioma, getT } from "@/i18n/servidor";
 import { getExplorerEnv } from "@/platform/config/env";
 import { evidenceUrl, getCatalogService, getIdentityService } from "@/platform/container";
 import { getDb } from "@/platform/db/client";
@@ -23,26 +23,27 @@ export default async function PerfilPage() {
   const session = await requireSession("/perfil", "persona");
   const { t, ruta } = await getT();
   const db = getDb();
+  const idioma = await getIdioma();
   const [[profile], cases, identity] = await Promise.all([
     db
       .select({ alias: personProfiles.alias, account: personProfiles.stellarAccount })
       .from(personProfiles)
       .where(eq(personProfiles.userId, session.userId))
       .limit(1),
-    getCatalogService().listCases(),
+    getCatalogService().listCases(idioma),
     getIdentityService().status(session.userId),
   ]);
 
   const account = profile?.account ?? null;
   const view: DonorView = account
-    ? await getDonorView(db, account, session.userId)
+    ? await getDonorView(db, account, idioma, session.userId)
     : {
         account: "",
         alias: profile?.alias ?? null,
         contributions: [],
         cases: [],
         totalAmount: "0",
-        volunteerings: await enrollmentsOf(db, session.userId),
+        volunteerings: await enrollmentsOf(db, session.userId, idioma),
       };
   const alias = profile?.alias ?? session.email;
   const routes = new Map(cases.map((c) => [c.code, c.route]));

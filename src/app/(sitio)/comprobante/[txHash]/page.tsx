@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconoCheck } from "@/components/iconos";
 import { buttonClass, ExplorerLink } from "@/components/ui";
-import { getT } from "@/i18n/servidor";
+import { getIdioma, getT } from "@/i18n/servidor";
 import { shortAccount } from "@/lib/stellar-account";
 import { getCatalogService } from "@/platform/container";
 import { Reveal } from "@/components/movimiento/Reveal";
@@ -16,7 +16,7 @@ type Props = { params: Promise<{ txHash: string }> };
 /** Metadatos para compartir en redes (Open Graph): por esto el comprobante se renderiza en el servidor. */
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const [{ txHash }, { t, formatAmount }] = await Promise.all([params, getT()]);
-  const receipt = await getCatalogService().receipt(txHash.toLowerCase());
+  const receipt = await getCatalogService().receipt(txHash.toLowerCase(), await getIdioma());
   if (!receipt) return { title: t("casos.comprobante.metaNoEncontrado") };
   const title = t("casos.comprobante.metaTitulo", { nombre: receipt.caseName, codigo: receipt.caseCode });
   const description = t("casos.comprobante.metaDescripcion", { monto: formatAmount(receipt.amount), ong: receipt.ngoName });
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /** Comprobante público de un aporte (RF-COM-01). Solo muestra lo que ya es público en la red. */
 export default async function ComprobantePage({ params }: Props) {
   const [{ txHash }, { t, ruta, formatAmount, formatDate }] = await Promise.all([params, getT()]);
-  const receipt = await getCatalogService().receipt(txHash.toLowerCase());
+  const receipt = await getCatalogService().receipt(txHash.toLowerCase(), await getIdioma());
   if (!receipt) notFound();
 
   return (

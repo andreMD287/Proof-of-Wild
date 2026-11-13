@@ -198,7 +198,7 @@ async function main() {
       explorerBaseUrl: "https://stellar.expert/explorer/testnet",
       evidenceUrl: (k) => (k.startsWith("/") ? k : storage.publicUrl(k)),
     });
-    same(units((await catalog.caseDetail(CASE.code))!.transparency.received), "0", `${CASE.code} empieza en 0 USDC`);
+    same(units((await catalog.caseDetail(CASE.code, "es"))!.transparency.received), "0", `${CASE.code} empieza en 0 USDC`);
 
     // Aporte ----------------------------------------------------------------------------------------------
     console.log("\n▸ Aporte de 50 USDC a POW_001");
@@ -325,7 +325,7 @@ async function main() {
     );
     same([fromStroops(BigInt(view.recaudado)), fromStroops(BigInt(view.gastado)), fromStroops(BigInt(view.saldo))].map(units), ["50", "25", "25"], "el contrato: recaudado 50, gastado 25, saldo 25");
     same(Number(view.hitos), 1, "el contrato tiene 1 hito");
-    const detail = await catalog.caseDetail(CASE.code);
+    const detail = await catalog.caseDetail(CASE.code, "es");
     same(
       [detail!.transparency.received, detail!.transparency.spent, detail!.transparency.available].map(units),
       ["50", "25", "25"],
@@ -337,9 +337,9 @@ async function main() {
       "cada etapa muestra lo cubierto y lo gastado",
     );
     ok(detail!.stages[0]!.milestones.length === 1 && detail!.stages[0]!.expenses.length === 1, "la etapa 1 muestra su gasto y su hito");
-    const receipt = await catalog.receipt(sent.txHash);
+    const receipt = await catalog.receipt(sent.txHash, "es");
     same(receipt?.allocations.map((a) => [a.position, units(a.amount)]), [[1, "40"], [2, "10"]], "el comprobante muestra el reparto");
-    const donorView = await getDonorView(db, donor);
+    const donorView = await getDonorView(db, donor, "es");
     same([units(donorView.totalAmount), donorView.cases.length], ["50", 1], "el perfil del donante: 50 USDC en 1 caso");
     const confirmedExpenses = await db
       .select({ id: schema.expenses.id })

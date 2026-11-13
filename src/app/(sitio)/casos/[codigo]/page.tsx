@@ -13,7 +13,7 @@ import { IconoFlecha } from "@/components/iconos";
 import { ContourField } from "@/components/mapa/ContourField";
 import { RouteMap } from "@/components/mapa/RouteMap";
 import { buttonClass, Chip, ProgressBar } from "@/components/ui";
-import { getT } from "@/i18n/servidor";
+import { getIdioma, getT } from "@/i18n/servidor";
 import { getExplorerEnv } from "@/platform/config/env";
 import { getCatalogService, getIdentityService } from "@/platform/container";
 import { Reveal } from "@/components/movimiento/Reveal";
@@ -29,7 +29,7 @@ const TABS = ["linea", "transparencia", "aportes"] as const;
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const [{ codigo }, { t }] = await Promise.all([params, getT()]);
-  const detail = await getCatalogService().caseDetail(codigo);
+  const detail = await getCatalogService().caseDetail(codigo, await getIdioma());
   if (!detail) return { title: t("casos.detalle.metaNoEncontrado") };
   const name = detail.commonName ?? t("casos.especieReservada");
   return { title: `${name} · ${detail.code}`, description: detail.shortStory };
@@ -47,7 +47,7 @@ export default async function CaseDetailPage({ params, searchParams }: Params) {
     getT(),
   ]);
   const { t, rich, ruta, formatAmount, formatDate } = tr;
-  const detail = await getCatalogService().caseDetail(codigo);
+  const detail = await getCatalogService().caseDetail(codigo, await getIdioma());
   if (!detail) notFound();
 
   const tab = TABS.find((id) => id === pestana) ?? "linea";

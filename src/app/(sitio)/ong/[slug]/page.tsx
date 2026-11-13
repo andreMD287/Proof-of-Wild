@@ -8,7 +8,7 @@ import { ContourField } from "@/components/mapa/ContourField";
 import { Reveal } from "@/components/movimiento/Reveal";
 import { RouteMap } from "@/components/mapa/RouteMap";
 import { Chip, EmptyState, ExplorerLink } from "@/components/ui";
-import { getT } from "@/i18n/servidor";
+import { getIdioma, getT } from "@/i18n/servidor";
 import type { Clave } from "@/i18n/traductor";
 import { explorerAccountUrl, explorerTxUrl } from "@/lib/explorer";
 import { shortAccount } from "@/lib/stellar-account";
@@ -33,7 +33,7 @@ const KYB_CHECKS: ReadonlyArray<readonly [Clave, Clave]> = [
 ];
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const ngo = await getPublicNgo(getDb(), (await params).slug);
+  const ngo = await getPublicNgo(getDb(), (await params).slug, await getIdioma());
   if (ngo) return { title: ngo.name, description: ngo.description };
   const { t } = await getT();
   return { title: t("ong.perfil.meta.noEncontrada") };
@@ -43,13 +43,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function OngProfilePage({ params }: Props) {
   const { slug } = await params;
   const db = getDb();
-  const ngo = await getPublicNgo(db, slug);
+  const idioma = await getIdioma();
+  const ngo = await getPublicNgo(db, slug, idioma);
   if (!ngo) notFound();
 
   const tr = await getT();
   const { t, rich, ruta, formatAmount, formatDate } = tr;
   const explorer = getExplorerEnv().EXPLORER_BASE_URL;
-  const [allCases, volunteering] = await Promise.all([getCatalogService().listCases(), listVolunteerings(db)]);
+  const [allCases, volunteering] = await Promise.all([
+    getCatalogService().listCases(idioma),
+    listVolunteerings(db, idioma),
+  ]);
   const own = allCases.filter((c) => c.ngo.slug === ngo.slug);
   const released = own.filter((c) => c.outcome === "liberado").length;
   const invoicedPct =
