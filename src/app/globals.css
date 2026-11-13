@@ -251,6 +251,12 @@ html {
 .anim-ventana {
   animation: ventana 0.45s var(--ease-spring) both;
 }
+/* Fondo de las ventanas modales (<dialog>, ver components/ventana.tsx). Colores y curvas con respaldo por si el
+   navegador no hereda las variables en ::backdrop. */
+.ventana::backdrop {
+  background: color-mix(in oklab, var(--color-texto, #1f2a22) 60%, transparent);
+  animation: fondo 0.25s var(--ease-out-expo, ease-out) both;
+}
 @keyframes fondo {
   from {
     opacity: 0;

@@ -3,10 +3,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useWallet, walletErrorMessage } from "@/components/billetera/WalletProvider";
 import { IconoCheck, IconoEscudo, IconoMenu } from "@/components/iconos";
 import { buttonClass, Spinner } from "@/components/ui";
+import { Ventana } from "@/components/ventana";
 import { useT } from "@/i18n/cliente";
 import { traducirError } from "@/i18n/errores";
 import type { Clave } from "@/i18n/traductor";
@@ -91,11 +92,6 @@ export function ApadrinarDialog({
     router.refresh();
   };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && step === "idle" && close();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
 
   const preview = useMemo(() => {
     if (!AMOUNT.test(amount)) return { allocation: null, message: null };
@@ -183,259 +179,251 @@ export function ApadrinarDialog({
   const allocation = receipt?.allocation ?? preview.allocation;
 
   return (
-    <div className="anim-fondo fixed inset-0 z-50 flex items-center justify-center bg-texto/60 p-4" onClick={() => !busy && close()}>
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="titulo-apadrinar"
-        onClick={(e) => e.stopPropagation()}
-        className="anim-ventana grid max-h-[94vh] w-full max-w-5xl overflow-auto rounded-[28px] bg-white shadow-2xl md:grid-cols-[1fr_1.4fr]"
-      >
-        <aside className="space-y-4 bg-crema p-7">
-          <div className="relative aspect-[4/2.2] overflow-hidden rounded-2xl bg-white">
-            {item.photoUrl ? <Image src={item.photoUrl} alt={item.name} fill sizes="400px" className="object-cover" /> : null}
-          </div>
-          <div>
-            <p className="font-serif text-3xl">{item.name}</p>
-            <p className="text-secundario">
-              {item.code} · {item.ngoName}
-            </p>
-          </div>
-          <p className="flex justify-between border-t border-arena pt-3">
-            <span>{receipt ? t("casos.apadrinar.faltaAhora") : t("casos.apadrinar.falta")}</span>
-            <strong>{formatAmount(remainingAfter)}</strong>
+    <Ventana onClose={close} canClose={!busy} labelledBy="titulo-apadrinar" className="grid md:grid-cols-[1fr_1.4fr]">
+      <aside className="space-y-4 bg-crema p-7">
+        <div className="relative aspect-[4/2.2] overflow-hidden rounded-2xl bg-white">
+          {item.photoUrl ? <Image src={item.photoUrl} alt={item.name} fill sizes="400px" className="object-cover" /> : null}
+        </div>
+        <div>
+          <p className="font-serif text-3xl">{item.name}</p>
+          <p className="text-secundario">
+            {item.code} · {item.ngoName}
           </p>
-          <div className="rounded-2xl bg-salvia p-5">
-            <p className="font-semibold">
-              {receipt ? t("casos.apadrinar.repartoHecho") : t("casos.apadrinar.repartoPrevio")}
-            </p>
-            {allocation ? (
-              <ul className="mt-2 space-y-1.5">
-                {allocation.map((a) => (
-                  <li key={a.position} className="flex justify-between gap-3">
-                    <span>
-                      {a.position}. {stageName(a.position)}
-                    </span>
-                    <strong className="whitespace-nowrap">{formatAmount(a.amount)}</strong>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-2 text-sm">{preview.message ?? t("casos.apadrinar.eligeMonto")}</p>
-            )}
-            <p className="mt-3 text-sm">{t("casos.apadrinar.orden")}</p>
-          </div>
-        </aside>
+        </div>
+        <p className="flex justify-between border-t border-arena pt-3">
+          <span>{receipt ? t("casos.apadrinar.faltaAhora") : t("casos.apadrinar.falta")}</span>
+          <strong>{formatAmount(remainingAfter)}</strong>
+        </p>
+        <div className="rounded-2xl bg-salvia p-5">
+          <p className="font-semibold">
+            {receipt ? t("casos.apadrinar.repartoHecho") : t("casos.apadrinar.repartoPrevio")}
+          </p>
+          {allocation ? (
+            <ul className="mt-2 space-y-1.5">
+              {allocation.map((a) => (
+                <li key={a.position} className="flex justify-between gap-3">
+                  <span>
+                    {a.position}. {stageName(a.position)}
+                  </span>
+                  <strong className="whitespace-nowrap">{formatAmount(a.amount)}</strong>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm">{preview.message ?? t("casos.apadrinar.eligeMonto")}</p>
+          )}
+          <p className="mt-3 text-sm">{t("casos.apadrinar.orden")}</p>
+        </div>
+      </aside>
 
-        <section className="space-y-5 p-8">
-          <div className="flex items-center justify-between gap-4">
-            <ol className="flex items-center gap-3 text-sm font-semibold">
-              <li className="flex items-center gap-2">
-                <span className={`flex h-7 w-7 items-center justify-center rounded-full ${receipt ? "bg-crema" : "bg-bosque text-white"}`}>1</span>
-                {t("casos.tuAporte")}
-              </li>
-              <li aria-hidden className="h-px w-10 bg-arena" />
-              <li className="flex items-center gap-2">
-                <span className={`flex h-7 w-7 items-center justify-center rounded-full ${receipt ? "bg-bosque text-white" : "bg-crema"}`}>2</span>
-                {t("casos.apadrinar.pasoComprobante")}
-              </li>
-            </ol>
+      <section className="space-y-5 p-8">
+        <div className="flex items-center justify-between gap-4">
+          <ol className="flex items-center gap-3 text-sm font-semibold">
+            <li className="flex items-center gap-2">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full ${receipt ? "bg-crema" : "bg-bosque text-white"}`}>1</span>
+              {t("casos.tuAporte")}
+            </li>
+            <li aria-hidden className="h-px w-10 bg-arena" />
+            <li className="flex items-center gap-2">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full ${receipt ? "bg-bosque text-white" : "bg-crema"}`}>2</span>
+              {t("casos.apadrinar.pasoComprobante")}
+            </li>
+          </ol>
+          <button
+            type="button"
+            onClick={close}
+            disabled={busy}
+            aria-label={t("casos.cerrar")}
+            className="mov-hover flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-arena text-texto transition-[transform,border-color,color] duration-200 ease-(--ease-spring) hover:rotate-90 hover:border-bosque hover:text-bosque disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <IconoMenu abierto className="h-5 w-5" />
+          </button>
+        </div>
+
+        {receipt ? (
+          <div className="space-y-5">
+            <h2 id="titulo-apadrinar" className="flex items-center gap-4 text-4xl">
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-bosque text-white">
+                <IconoCheck className="h-7 w-7" />
+              </span>
+              {t("casos.apadrinar.gracias")}
+            </h2>
+            <dl className="grid grid-cols-[auto_1fr] gap-x-8 gap-y-3 rounded-2xl bg-gris p-5">
+              <dt className="text-secundario">{t("casos.col.monto")}</dt>
+              <dd className="font-semibold">{formatAmount(receipt.amount.replace(",", "."))}</dd>
+              <dt className="text-secundario">{t("casos.col.caso")}</dt>
+              <dd>
+                {item.name} · {item.code}
+              </dd>
+              <dt className="text-secundario">{t("casos.col.fecha")}</dt>
+              <dd>
+                {receipt.at.toLocaleString(locale, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
+              </dd>
+              <dt className="text-secundario">{t("casos.col.transaccion")}</dt>
+              <dd className="flex flex-wrap gap-3">
+                <span className="font-mono">
+                  {receipt.txHash.slice(0, 4)}…{receipt.txHash.slice(-4)}
+                </span>
+                <a
+                  href={`${explorerBaseUrl.replace(/\/+$/, "")}/tx/${receipt.txHash}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-bosque underline"
+                >
+                  {t("casos.verEnStellarExpert")}
+                </a>
+              </dd>
+            </dl>
+            <div className="flex flex-wrap items-center gap-3">
+              <button type="button" onClick={close} className={buttonClass("primario")}>
+                {t("casos.verEnQueSeUsa")}
+              </button>
+              <Link href={ruta(profileHref ?? `/huella/${wallet.address ?? ""}`)} className={buttonClass("secundario")}>
+                {t("casos.apadrinar.irPerfil")}
+              </Link>
+              <button type="button" onClick={share} className="font-semibold text-bosque underline">
+                {copied ? t("casos.apadrinar.enlaceCopiado") : t("casos.apadrinar.compartir")}
+              </button>
+            </div>
             <button
               type="button"
-              onClick={close}
-              disabled={busy}
-              aria-label={t("casos.cerrar")}
-              className="mov-hover flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border-2 border-arena text-texto transition-[transform,border-color,color] duration-200 ease-(--ease-spring) hover:rotate-90 hover:border-bosque hover:text-bosque disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => {
+                setReceipt(null);
+                router.refresh();
+              }}
+              className="text-sm font-medium text-bosque underline"
             >
-              <IconoMenu abierto className="h-5 w-5" />
+              {t("casos.apadrinar.otroAporte")}
             </button>
           </div>
-
-          {receipt ? (
-            <div className="space-y-5">
-              <h2 id="titulo-apadrinar" className="flex items-center gap-4 text-4xl">
-                <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-bosque text-white">
-                  <IconoCheck className="h-7 w-7" />
+        ) : (
+          <div className="space-y-5">
+            {welcome != null ? (
+              <p className="anim-ventana flex items-center gap-3 rounded-[18px] bg-salvia px-4 py-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bosque text-white">
+                  <IconoCheck className="h-4 w-4" />
                 </span>
-                {t("casos.apadrinar.gracias")}
+                <span>
+                  {welcome
+                    ? rich("casos.apadrinar.bienvenidaNombre", { b: (s) => <strong>{s}</strong> }, { nombre: welcome })
+                    : rich("casos.apadrinar.bienvenida", { b: (s) => <strong>{s}</strong> })}
+                </span>
+              </p>
+            ) : null}
+            <div className="space-y-2">
+              <h2 id="titulo-apadrinar" className="text-4xl">
+                {t("casos.apadrinar.titulo")}
               </h2>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-8 gap-y-3 rounded-2xl bg-gris p-5">
-                <dt className="text-secundario">{t("casos.col.monto")}</dt>
-                <dd className="font-semibold">{formatAmount(receipt.amount.replace(",", "."))}</dd>
-                <dt className="text-secundario">{t("casos.col.caso")}</dt>
-                <dd>
-                  {item.name} · {item.code}
-                </dd>
-                <dt className="text-secundario">{t("casos.col.fecha")}</dt>
-                <dd>
-                  {receipt.at.toLocaleString(locale, { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" })}
-                </dd>
-                <dt className="text-secundario">{t("casos.col.transaccion")}</dt>
-                <dd className="flex flex-wrap gap-3">
-                  <span className="font-mono">
-                    {receipt.txHash.slice(0, 4)}…{receipt.txHash.slice(-4)}
-                  </span>
-                  <a
-                    href={`${explorerBaseUrl.replace(/\/+$/, "")}/tx/${receipt.txHash}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium text-bosque underline"
-                  >
-                    {t("casos.verEnStellarExpert")}
-                  </a>
-                </dd>
-              </dl>
-              <div className="flex flex-wrap items-center gap-3">
-                <button type="button" onClick={close} className={buttonClass("primario")}>
-                  {t("casos.verEnQueSeUsa")}
-                </button>
-                <Link href={ruta(profileHref ?? `/huella/${wallet.address ?? ""}`)} className={buttonClass("secundario")}>
-                  {t("casos.apadrinar.irPerfil")}
-                </Link>
-                <button type="button" onClick={share} className="font-semibold text-bosque underline">
-                  {copied ? t("casos.apadrinar.enlaceCopiado") : t("casos.apadrinar.compartir")}
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setReceipt(null);
-                  router.refresh();
-                }}
-                className="text-sm font-medium text-bosque underline"
-              >
-                {t("casos.apadrinar.otroAporte")}
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {welcome != null ? (
-                <p className="anim-ventana flex items-center gap-3 rounded-[18px] bg-salvia px-4 py-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-bosque text-white">
-                    <IconoCheck className="h-4 w-4" />
-                  </span>
-                  <span>
-                    {welcome
-                      ? rich("casos.apadrinar.bienvenidaNombre", { b: (s) => <strong>{s}</strong> }, { nombre: welcome })
-                      : rich("casos.apadrinar.bienvenida", { b: (s) => <strong>{s}</strong> })}
-                  </span>
+              {identityVerified ? (
+                <p className="flex items-center gap-2 text-sm font-semibold text-bosque">
+                  <IconoEscudo className="h-4 w-4" /> {t("casos.apadrinar.identidadVerificada")}
                 </p>
               ) : null}
-              <div className="space-y-2">
-                <h2 id="titulo-apadrinar" className="text-4xl">
-                  {t("casos.apadrinar.titulo")}
-                </h2>
-                {identityVerified ? (
-                  <p className="flex items-center gap-2 text-sm font-semibold text-bosque">
-                    <IconoEscudo className="h-4 w-4" /> {t("casos.apadrinar.identidadVerificada")}
-                  </p>
-                ) : null}
-              </div>
-              <fieldset>
-                <legend className="mb-2 font-semibold">{t("casos.apadrinar.leyendaMonto")}</legend>
-                <div className="grid grid-cols-3 gap-3">
-                  {SUGGESTED.map((s) => {
-                    const fits = Number(s) <= Number(item.remaining);
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        disabled={!fits || busy}
-                        aria-pressed={amount === s}
-                        onClick={() => setAmount(s)}
-                        className={`mov-hover cifras cursor-pointer rounded-xl border-2 py-3 text-lg font-semibold transition-[transform,background-color,border-color,color] duration-200 ease-(--ease-spring) hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 ${amount === s ? "border-bosque bg-bosque text-white" : "border-arena hover:border-bosque hover:text-bosque"}`}
-                      >
-                        {s} USDC
-                      </button>
-                    );
-                  })}
-                </div>
-                <label className="mt-3 flex items-center gap-3">
-                  <span className="shrink-0">{t("casos.apadrinar.otroValor")}</span>
-                  <input
-                    inputMode="decimal"
-                    value={SUGGESTED.includes(amount) ? "" : amount}
-                    onChange={(e) => setAmount(e.target.value.trim())}
-                    disabled={busy}
-                    placeholder={t("casos.apadrinar.placeholderMonto")}
-                    className="w-full rounded-xl border border-arena px-4 py-3 outline-none focus:border-bosque"
-                  />
-                </label>
-                <p className="mt-2 text-sm text-secundario">{t("casos.apadrinar.aporteUnico")}</p>
-              </fieldset>
-
-              {needsVerification ? (
-                <div className="anim-ventana flex flex-wrap items-center gap-4 rounded-[18px] bg-crema p-4">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-profundo text-crema">
-                    <IconoEscudo className="h-5 w-5" />
-                  </span>
-                  <p className="min-w-0 flex-1">
-                    <strong className="block">{t("casos.apadrinar.limiteTitulo", { limite: UNVERIFIED_LIMIT })}</strong>
-                    <span className="text-sm text-secundario">{t("casos.apadrinar.limiteTexto")}</span>
-                  </p>
-                  <Link href={verifyHref} className={buttonClass("primario", "py-2.5")}>
-                    {t("casos.apadrinar.verificar")}
-                  </Link>
-                </div>
-              ) : null}
-
-              <div className="flex items-center justify-between gap-3 rounded-2xl bg-gris px-5 py-4">
-                {wallet.address ? (
-                  <>
-                    <span className="flex items-center gap-2">
-                      <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-bosque" />
-                      {rich(
-                        "casos.apadrinar.billeteraConectada",
-                        { b: (s) => <strong className="font-mono">{s}</strong> },
-                        { cuenta: shortAccount(wallet.address) },
-                      )}
-                    </span>
-                    <button type="button" disabled={busy} onClick={() => wallet.connect().catch(() => {})} className="font-medium text-bosque underline">
-                      {t("casos.apadrinar.cambiar")}
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span>{t("casos.apadrinar.conectaTexto")}</span>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => wallet.connect().catch((e) => setError(walletErrorMessage(e, t)))}
-                      className={buttonClass("secundario", "py-2")}
-                    >
-                      {t("casos.apadrinar.conectar")}
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {error ? (
-                <div role="alert" className="flex items-center justify-between gap-4 rounded-2xl border border-error px-5 py-4 text-error">
-                  <span className="font-medium">{error}</span>
-                  <button type="button" onClick={confirm} className="mov-hover cursor-pointer rounded-xl bg-error px-5 py-2 font-semibold text-white transition-transform duration-200 ease-(--ease-spring) hover:-translate-y-0.5 active:scale-95">
-                    {t("comun.error.reintentar")}
-                  </button>
-                </div>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={confirm}
-                disabled={busy || !preview.allocation || needsVerification}
-                className={buttonClass("primario", "w-full py-4 text-lg")}
-              >
-                {busy ? <Spinner className="h-5 w-5" /> : null}
-                {busy
-                  ? t(STEP_LABELS[step as Exclude<Step, "idle">])
-                  : t("casos.apadrinar.confirmar", {
-                      monto: preview.allocation ? formatAmount(amount.replace(",", ".")) : "…",
-                    })}
-              </button>
-              <p className="text-center text-sm text-secundario">{t("casos.apadrinar.pie")}</p>
             </div>
-          )}
-        </section>
-      </div>
-    </div>
+            <fieldset>
+              <legend className="mb-2 font-semibold">{t("casos.apadrinar.leyendaMonto")}</legend>
+              <div className="grid grid-cols-3 gap-3">
+                {SUGGESTED.map((s) => {
+                  const fits = Number(s) <= Number(item.remaining);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      disabled={!fits || busy}
+                      aria-pressed={amount === s}
+                      onClick={() => setAmount(s)}
+                      className={`mov-hover cifras cursor-pointer rounded-xl border-2 py-3 text-lg font-semibold transition-[transform,background-color,border-color,color] duration-200 ease-(--ease-spring) hover:-translate-y-0.5 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 ${amount === s ? "border-bosque bg-bosque text-white" : "border-arena hover:border-bosque hover:text-bosque"}`}
+                    >
+                      {s} USDC
+                    </button>
+                  );
+                })}
+              </div>
+              <label className="mt-3 flex items-center gap-3">
+                <span className="shrink-0">{t("casos.apadrinar.otroValor")}</span>
+                <input
+                  inputMode="decimal"
+                  value={SUGGESTED.includes(amount) ? "" : amount}
+                  onChange={(e) => setAmount(e.target.value.trim())}
+                  disabled={busy}
+                  placeholder={t("casos.apadrinar.placeholderMonto")}
+                  className="w-full rounded-xl border border-arena px-4 py-3 outline-none focus:border-bosque"
+                />
+              </label>
+              <p className="mt-2 text-sm text-secundario">{t("casos.apadrinar.aporteUnico")}</p>
+            </fieldset>
+
+            {needsVerification ? (
+              <div className="anim-ventana flex flex-wrap items-center gap-4 rounded-[18px] bg-crema p-4">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-profundo text-crema">
+                  <IconoEscudo className="h-5 w-5" />
+                </span>
+                <p className="min-w-0 flex-1">
+                  <strong className="block">{t("casos.apadrinar.limiteTitulo", { limite: UNVERIFIED_LIMIT })}</strong>
+                  <span className="text-sm text-secundario">{t("casos.apadrinar.limiteTexto")}</span>
+                </p>
+                <Link href={verifyHref} className={buttonClass("primario", "py-2.5")}>
+                  {t("casos.apadrinar.verificar")}
+                </Link>
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-gris px-5 py-4">
+              {wallet.address ? (
+                <>
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-bosque" />
+                    {rich(
+                      "casos.apadrinar.billeteraConectada",
+                      { b: (s) => <strong className="font-mono">{s}</strong> },
+                      { cuenta: shortAccount(wallet.address) },
+                    )}
+                  </span>
+                  <button type="button" disabled={busy} onClick={() => wallet.connect().catch(() => {})} className="font-medium text-bosque underline">
+                    {t("casos.apadrinar.cambiar")}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span>{t("casos.apadrinar.conectaTexto")}</span>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => wallet.connect().catch((e) => setError(walletErrorMessage(e, t)))}
+                    className={buttonClass("secundario", "py-2")}
+                  >
+                    {t("casos.apadrinar.conectar")}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {error ? (
+              <div role="alert" className="flex items-center justify-between gap-4 rounded-2xl border border-error px-5 py-4 text-error">
+                <span className="font-medium">{error}</span>
+                <button type="button" onClick={confirm} className="mov-hover cursor-pointer rounded-xl bg-error px-5 py-2 font-semibold text-white transition-transform duration-200 ease-(--ease-spring) hover:-translate-y-0.5 active:scale-95">
+                  {t("comun.error.reintentar")}
+                </button>
+              </div>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={confirm}
+              disabled={busy || !preview.allocation || needsVerification}
+              className={buttonClass("primario", "w-full py-4 text-lg")}
+            >
+              {busy ? <Spinner className="h-5 w-5" /> : null}
+              {busy
+                ? t(STEP_LABELS[step as Exclude<Step, "idle">])
+                : t("casos.apadrinar.confirmar", {
+                    monto: preview.allocation ? formatAmount(amount.replace(",", ".")) : "…",
+                  })}
+            </button>
+            <p className="text-center text-sm text-secundario">{t("casos.apadrinar.pie")}</p>
+          </div>
+        )}
+      </section>
+    </Ventana>
   );
 }
